@@ -356,21 +356,27 @@ export class BoilerCard extends LitElement {
   }
 
   private renderSensor(sensor: SensorConfig, index: number): TemplateResult {
+    const state = this.hass?.states?.[sensor.entity];
     const temp = this.getSensorValue(sensor.entity);
-    const state = this.hass.states[sensor.entity];
     const unit = state?.attributes?.unit_of_measurement || '°C';
     const name = sensor.name || state?.attributes?.friendly_name || sensor.entity;
     const color = this.getTemperatureColor(temp);
     const isCompact = this.config.display_mode === 'compact';
 
+    // Show warning if entity doesn't exist
+    const entityExists = !!state;
+
     return html`
       <div
-        class="sensor-row ${this.config.enable_more_info ? 'clickable' : ''} ${isCompact ? 'compact' : ''}"
+        class="sensor-row ${this.config.enable_more_info ? 'clickable' : ''} ${isCompact ? 'compact' : ''} ${!entityExists ? 'unavailable' : ''}"
         @click=${() => this.handleSensorClick(sensor.entity)}
+        title="${!entityExists ? 'Entita nenalezena: ' + sensor.entity : ''}"
       >
-        <div class="sensor-label">${name}</div>
+        <div class="sensor-label">
+          ${!entityExists ? '⚠️ ' : ''}${name}
+        </div>
         <div class="sensor-value" style="color: ${color}">
-          ${temp !== null ? temp.toFixed(1) : '--'} ${unit}
+          ${temp !== null ? temp.toFixed(1) : (entityExists ? '--' : 'N/A')} ${unit}
         </div>
       </div>
     `;
@@ -419,8 +425,12 @@ export class BoilerCard extends LitElement {
   }
 
   protected render(): TemplateResult {
-    if (!this.config || !this.hass) {
-      return html``;
+    if (!this.config) {
+      return html`<ha-card><div class="card-content" style="padding: 16px;">Chyba: Neplatná konfigurace</div></ha-card>`;
+    }
+
+    if (!this.hass) {
+      return html`<ha-card><div class="card-content" style="padding: 16px;">Načítání...</div></ha-card>`;
     }
 
     const avgTemp = this.getAverageTemperature();
@@ -764,6 +774,17 @@ export class BoilerCard extends LitElement {
         text-align: center;
         color: var(--secondary-text-color);
         font-style: italic;
+      }
+
+      .sensor-row.unavailable {
+        opacity: 0.6;
+        background: var(--error-color, #f44336);
+        background: rgba(244, 67, 54, 0.1);
+        border: 1px solid var(--error-color, #f44336);
+      }
+
+      .sensor-row.unavailable .sensor-value {
+        color: var(--error-color, #f44336) !important;
       }
 
       @media (max-width: 600px) {
