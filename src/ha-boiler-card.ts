@@ -1,4 +1,4 @@
-import { LitElement, html, css, PropertyValues, TemplateResult } from 'lit';
+import { LitElement, html, css, PropertyValues, TemplateResult, svg } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardConfig } from 'custom-card-helpers';
 
@@ -11,22 +11,37 @@ interface BoilerCardConfig extends LovelaceCardConfig {
   show_average?: boolean;
   show_gradient?: boolean;
   show_stratification?: boolean;
+  show_sparkline?: boolean;
   min_temp?: number;
   max_temp?: number;
   display_mode?: 'normal' | 'compact';
   heating_type?: 'electric' | 'solar' | 'gas' | 'heat_pump';
   low_temp_warning?: number;
-  anode_last_change?: string; // ISO date
-  anode_change_interval?: number; // days
-  cleaning_last_date?: string; // ISO date
-  cleaning_interval?: number; // days
+  anode_last_change?: string;
+  anode_change_interval?: number;
+  cleaning_last_date?: string;
+  cleaning_interval?: number;
   enable_more_info?: boolean;
+  // Energy tracking
+  power_entity?: string;
+  energy_cost?: number;
+  // Dual source heating
+  heating_sources?: HeatingSource[];
+  // Advanced animations
+  advanced_animations?: boolean;
 }
 
 interface SensorConfig {
   entity: string;
   name?: string;
-  position?: number; // 1-5 from top to bottom
+  position?: number;
+}
+
+interface HeatingSource {
+  entity: string;
+  type: 'electric' | 'solar' | 'gas' | 'heat_pump';
+  name?: string;
+  priority?: number;
 }
 
 interface TempHistory {
@@ -48,6 +63,7 @@ export class BoilerCard extends LitElement {
       show_average: true,
       show_gradient: true,
       show_stratification: true,
+      show_sparkline: false,
       min_temp: 0,
       max_temp: 100,
       display_mode: 'normal',
@@ -55,20 +71,10 @@ export class BoilerCard extends LitElement {
       anode_change_interval: 365,
       cleaning_interval: 180,
       enable_more_info: true,
+      energy_cost: 0,
+      advanced_animations: true,
       ...config,
     };
-    console.log('HA Boiler Card: Config set', this.config);
-  }
-
-  protected firstUpdated(changedProps: PropertyValues): void {
-    super.firstUpdated(changedProps);
-    console.log('HA Boiler Card: First update', {
-      hasConfig: !!this.config,
-      hasHass: !!this.hass,
-      hasStates: !!this.hass?.states,
-      statesCount: this.hass?.states ? Object.keys(this.hass.states).length : 0,
-      sensors: this.config?.sensors?.map(s => s.entity)
-    });
   }
 
   protected shouldUpdate(changedProps: PropertyValues): boolean {
@@ -76,9 +82,7 @@ export class BoilerCard extends LitElement {
       return false;
     }
 
-    // Always update when hass changes (entity states update)
     if (changedProps.has('hass')) {
-      // Track temperature history for trend calculation
       if (this.hass?.states && this.config.target_temp_entity) {
         this.updateTempHistory();
       }
@@ -89,25 +93,44 @@ export class BoilerCard extends LitElement {
   }
 
   private updateTempHistory(): void {
-    const avgTemp = this.getAverageTemperature();
-    if (avgTemp === null) return;
+    if (!this.config.sensors) return;
 
     const now = Date.now();
-    const key = 'average';
-
-    if (!this.tempHistory.has(key)) {
-      this.tempHistory.set(key, []);
-    }
-
-    const history = this.tempHistory.get(key)!;
-    history.push({ value: avgTemp, timestamp: now });
-
-    // Keep only last 30 minutes of history
     const thirtyMinutesAgo = now - 30 * 60 * 1000;
-    this.tempHistory.set(
-      key,
-      history.filter(h => h.timestamp > thirtyMinutesAgo)
-    );
+
+    // Update history for each sensor
+    this.config.sensors.forEach(sensor => {
+      const temp = this.getSensorValue(sensor.entity);
+      if (temp === null) return;
+
+      if (!this.tempHistory.has(sensor.entity)) {
+        this.tempHistory.set(sensor.entity, []);
+      }
+
+      const history = this.tempHistory.get(sensor.entity)!;
+      history.push({ value: temp, timestamp: now });
+
+      // Keep only last 30 minutes
+      this.tempHistory.set(
+        sensor.entity,
+        history.filter(h => h.timestamp > thirtyMinutesAgo)
+      );
+    });
+
+    // Update average history
+    const avgTemp = this.getAverageTemperature();
+    if (avgTemp !== null) {
+      if (!this.tempHistory.has('average')) {
+        this.tempHistory.set('average', []);
+      }
+
+      const history = this.tempHistory.get('average')!;
+      history.push({ value: avgTemp, timestamp: now });
+      this.tempHistory.set(
+        'average',
+        history.filter(h => h.timestamp > thirtyMinutesAgo)
+      );
+    }
   }
 
   private getSensorValue(entityId: string): number | null {
@@ -137,6 +160,26 @@ export class BoilerCard extends LitElement {
     return state && (state.state === 'on' || state.state === 'heating');
   }
 
+  private getActiveHeatingSources(): HeatingSource[] {
+    if (!this.config.heating_sources || !this.hass?.states) return [];
+
+    return this.config.heating_sources.filter(source => {
+      const state = this.hass.states[source.entity];
+      return state && (state.state === 'on' || state.state === 'heating');
+    }).sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  }
+
+  private getPowerConsumption(): { power: number; cost: number } | null {
+    if (!this.config.power_entity || !this.hass?.states) return null;
+
+    const power = this.getSensorValue(this.config.power_entity);
+    if (power === null) return null;
+
+    const costPerHour = (power / 1000) * (this.config.energy_cost || 0);
+
+    return { power, cost: costPerHour };
+  }
+
   private getTemperatureColor(temp: number | null): string {
     if (temp === null) return '#888';
 
@@ -144,7 +187,6 @@ export class BoilerCard extends LitElement {
     const max = this.config.max_temp || 100;
     const ratio = Math.max(0, Math.min(1, (temp - min) / (max - min)));
 
-    // Blue -> Green -> Yellow -> Orange -> Red
     if (ratio < 0.25) {
       const r = Math.floor(ratio * 4 * 255);
       return `rgb(${r}, ${Math.floor(100 + ratio * 4 * 155)}, 255)`;
@@ -158,8 +200,8 @@ export class BoilerCard extends LitElement {
     }
   }
 
-  private getHeatingIcon(): string {
-    switch (this.config.heating_type) {
+  private getHeatingIcon(type: string): string {
+    switch (type) {
       case 'solar': return '☀️';
       case 'gas': return '🔥';
       case 'heat_pump': return '🌡️';
@@ -168,8 +210,8 @@ export class BoilerCard extends LitElement {
     }
   }
 
-  private getHeatingLabel(): string {
-    switch (this.config.heating_type) {
+  private getHeatingLabel(type: string): string {
+    switch (type) {
       case 'solar': return 'Solární ohřev';
       case 'gas': return 'Plynový ohřev';
       case 'heat_pump': return 'Tepelné čerpadlo';
@@ -186,20 +228,19 @@ export class BoilerCard extends LitElement {
 
     if (targetTemp === null || avgTemp === null) return null;
     if (avgTemp >= targetTemp) return null;
-    if (!this.isHeating()) return null;
+    if (!this.isHeating() && this.getActiveHeatingSources().length === 0) return null;
 
     const history = this.tempHistory.get('average');
     if (!history || history.length < 2) return null;
 
-    // Calculate heating rate (°C per minute)
     const oldest = history[0];
     const newest = history[history.length - 1];
-    const timeDiff = (newest.timestamp - oldest.timestamp) / 1000 / 60; // minutes
+    const timeDiff = (newest.timestamp - oldest.timestamp) / 1000 / 60;
     const tempDiff = newest.value - oldest.value;
 
-    if (timeDiff < 5 || tempDiff <= 0) return null; // Not enough data or cooling
+    if (timeDiff < 5 || tempDiff <= 0) return null;
 
-    const heatingRate = tempDiff / timeDiff; // °C per minute
+    const heatingRate = tempDiff / timeDiff;
     const remainingTemp = targetTemp - avgTemp;
     const minutesToTarget = Math.ceil(remainingTemp / heatingRate);
 
@@ -247,6 +288,51 @@ export class BoilerCard extends LitElement {
     return avgTemp !== null && avgTemp < this.config.low_temp_warning;
   }
 
+  private renderSparkline(entityId: string): TemplateResult {
+    if (!this.config.show_sparkline) return html``;
+
+    const history = this.tempHistory.get(entityId);
+    if (!history || history.length < 2) return html``;
+
+    const values = history.map(h => h.value);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const range = maxVal - minVal || 1;
+
+    const width = 40;
+    const height = 20;
+    const points = values.map((val, idx) => {
+      const x = (idx / (values.length - 1)) * width;
+      const y = height - ((val - minVal) / range) * height;
+      return `${x},${y}`;
+    }).join(' ');
+
+    return svg`
+      <svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <polyline
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          points="${points}"
+        />
+      </svg>
+    `;
+  }
+
+  private renderBubbles(): TemplateResult {
+    if (!this.config.advanced_animations) return html``;
+    if (!this.isHeating() && this.getActiveHeatingSources().length === 0) return html``;
+
+    return svg`
+      <g class="bubbles">
+        <circle cx="80" cy="240" r="3" fill="#fff" opacity="0.6" class="bubble bubble-1"/>
+        <circle cx="95" cy="235" r="2" fill="#fff" opacity="0.5" class="bubble bubble-2"/>
+        <circle cx="105" cy="242" r="2.5" fill="#fff" opacity="0.7" class="bubble bubble-3"/>
+        <circle cx="115" cy="238" r="2" fill="#fff" opacity="0.6" class="bubble bubble-4"/>
+      </g>
+    `;
+  }
+
   private renderStratificationLayers(): TemplateResult {
     if (!this.config.show_stratification || !this.config.sensors) {
       return html``;
@@ -262,12 +348,11 @@ export class BoilerCard extends LitElement {
       const temp = this.getSensorValue(sensor.entity);
       const color = this.getTemperatureColor(temp);
 
-      // Calculate position (5 layers max)
-      const layerHeight = 200 / 5; // Tank height 200px, 5 positions
+      const layerHeight = 200 / 5;
       const position = (sensor.position || 1) - 1;
       const y = 50 + position * layerHeight;
 
-      return html`
+      return svg`
         <rect
           x="51"
           y="${y + 1}"
@@ -279,31 +364,27 @@ export class BoilerCard extends LitElement {
       `;
     });
 
-    return html`${layers}`;
+    return svg`${layers}`;
   }
 
   private renderBoilerSVG(): TemplateResult {
     const isHeating = this.isHeating();
+    const activeSources = this.getActiveHeatingSources();
     const avgTemp = this.getAverageTemperature();
     const fillColor = this.config.show_gradient && avgTemp !== null
       ? this.getTemperatureColor(avgTemp)
       : '#4A90E2';
 
     const isCompact = this.config.display_mode === 'compact';
-    const width = isCompact ? 150 : 200;
-    const height = isCompact ? 225 : 300;
-    const scale = isCompact ? 0.75 : 1;
 
     return html`
       <svg class="boiler-svg ${isCompact ? 'compact' : ''}" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
-        <!-- Main boiler tank -->
         <defs>
           <linearGradient id="boilerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" style="stop-color:${fillColor};stop-opacity:0.3" />
             <stop offset="100%" style="stop-color:${fillColor};stop-opacity:0.9" />
           </linearGradient>
 
-          <!-- Heating glow effect -->
           <filter id="glow">
             <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
             <feMerge>
@@ -313,7 +394,7 @@ export class BoilerCard extends LitElement {
           </filter>
         </defs>
 
-        <!-- Temperature stratification layers -->
+        <!-- Stratification layers -->
         ${this.renderStratificationLayers()}
 
         <!-- Tank body -->
@@ -336,13 +417,16 @@ export class BoilerCard extends LitElement {
                  stroke-width="2"
                  opacity="0.6"/>
 
-        <!-- Heating element indicator at bottom -->
-        ${isHeating ? html`
+        <!-- Heating element indicator -->
+        ${(isHeating || activeSources.length > 0) ? svg`
           <rect x="70" y="240" width="60" height="8" rx="4"
                 fill="#FF6B35"
                 filter="url(#glow)"
                 class="heating-pulse"/>
         ` : ''}
+
+        <!-- Bubbles animation -->
+        ${this.renderBubbles()}
 
         <!-- Pipe connections -->
         <circle cx="140" cy="80" r="8" fill="#666" stroke="#333" stroke-width="1"/>
@@ -351,7 +435,7 @@ export class BoilerCard extends LitElement {
         <circle cx="140" cy="220" r="8" fill="#666" stroke="#333" stroke-width="1"/>
         <rect x="140" y="216" width="30" height="8" fill="#666" stroke="#333" stroke-width="1"/>
 
-        <!-- Temperature level markers -->
+        <!-- Temperature markers -->
         <line x1="45" y1="80" x2="50" y2="80" stroke="#999" stroke-width="1"/>
         <line x1="45" y1="115" x2="50" y2="115" stroke="#999" stroke-width="1"/>
         <line x1="45" y1="150" x2="50" y2="150" stroke="#999" stroke-width="1"/>
@@ -379,8 +463,6 @@ export class BoilerCard extends LitElement {
     const name = sensor.name || state?.attributes?.friendly_name || sensor.entity;
     const color = this.getTemperatureColor(temp);
     const isCompact = this.config.display_mode === 'compact';
-
-    // Show warning if entity doesn't exist
     const entityExists = !!state;
 
     return html`
@@ -389,12 +471,64 @@ export class BoilerCard extends LitElement {
         @click=${() => this.handleSensorClick(sensor.entity)}
         title="${!entityExists ? 'Entita nenalezena: ' + sensor.entity : ''}"
       >
-        <div class="sensor-label">
-          ${!entityExists ? '⚠️ ' : ''}${name}
+        <div class="sensor-info">
+          <div class="sensor-label">
+            ${!entityExists ? '⚠️ ' : ''}${name}
+          </div>
+          ${this.renderSparkline(sensor.entity)}
         </div>
         <div class="sensor-value" style="color: ${color}">
           ${temp !== null ? temp.toFixed(1) : (entityExists ? '--' : 'N/A')} ${unit}
         </div>
+      </div>
+    `;
+  }
+
+  private renderEnergyInfo(): TemplateResult {
+    const consumption = this.getPowerConsumption();
+    if (!consumption) return html``;
+
+    return html`
+      <div class="energy-info">
+        <div class="energy-label">💡 Spotřeba</div>
+        <div class="energy-values">
+          <div class="energy-power">${(consumption.power / 1000).toFixed(2)} kW</div>
+          ${this.config.energy_cost ? html`
+            <div class="energy-cost">${consumption.cost.toFixed(2)} Kč/h</div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderHeatingSources(): TemplateResult {
+    const activeSources = this.getActiveHeatingSources();
+
+    // Legacy single source
+    if (this.config.heating_entity && !this.config.heating_sources) {
+      const isHeating = this.isHeating();
+      if (!isHeating) return html``;
+
+      return html`
+        <div class="heating-indicator ${this.config.display_mode === 'compact' ? 'compact' : ''}">
+          <span class="heating-icon">${this.getHeatingIcon(this.config.heating_type || 'electric')}</span>
+          <span>${this.getHeatingLabel(this.config.heating_type || 'electric')}</span>
+        </div>
+      `;
+    }
+
+    // Dual/multi source
+    if (activeSources.length === 0) return html``;
+
+    return html`
+      <div class="heating-sources">
+        ${activeSources.map(source => html`
+          <div class="heating-source ${this.config.display_mode === 'compact' ? 'compact' : ''}">
+            <span class="heating-icon">${this.getHeatingIcon(source.type)}</span>
+            <span>${source.name || this.getHeatingLabel(source.type)}</span>
+            ${source.priority ? html`<span class="priority">P${source.priority}</span>` : ''}
+          </div>
+        `)}
       </div>
     `;
   }
@@ -442,35 +576,18 @@ export class BoilerCard extends LitElement {
   }
 
   protected render(): TemplateResult {
-    if (!this.config) {
-      return html`<ha-card><div class="card-content" style="padding: 16px;">Chyba: Neplatná konfigurace</div></ha-card>`;
-    }
-
-    if (!this.hass) {
-      return html`<ha-card><div class="card-content" style="padding: 16px;">Načítání Home Assistant...</div></ha-card>`;
-    }
-
-    if (!this.hass.states) {
-      console.warn('HA Boiler Card: hass.states is undefined');
-      return html`<ha-card><div class="card-content" style="padding: 16px;">Čekání na entity...</div></ha-card>`;
-    }
-
-    const statesCount = Object.keys(this.hass.states).length;
-    if (statesCount === 0) {
-      console.warn('HA Boiler Card: No entities loaded');
-      return html`<ha-card><div class="card-content" style="padding: 16px;">Žádné entity nenalezeny. Počet entit: ${statesCount}</div></ha-card>`;
+    if (!this.config || !this.hass) {
+      return html``;
     }
 
     const avgTemp = this.getAverageTemperature();
     const targetTemp = this.config.target_temp_entity
       ? this.getSensorValue(this.config.target_temp_entity)
       : null;
-    const isHeating = this.isHeating();
     const timeToTarget = this.calculateTimeToTarget();
     const hasLowTempWarning = this.hasLowTempWarning();
     const isCompact = this.config.display_mode === 'compact';
 
-    // Sort sensors by position
     const sortedSensors = [...(this.config.sensors || [])].sort((a, b) => {
       const posA = a.position || 0;
       const posB = b.position || 0;
@@ -493,12 +610,7 @@ export class BoilerCard extends LitElement {
             <div class="boiler-visual">
               ${this.renderBoilerSVG()}
 
-              ${isHeating ? html`
-                <div class="heating-indicator ${isCompact ? 'compact' : ''}">
-                  <span class="heating-icon">${this.getHeatingIcon()}</span>
-                  <span>${this.getHeatingLabel()}</span>
-                </div>
-              ` : ''}
+              ${this.renderHeatingSources()}
 
               ${targetTemp !== null ? html`
                 <div class="target-temp ${isCompact ? 'compact' : ''}">
@@ -508,6 +620,8 @@ export class BoilerCard extends LitElement {
                   ` : ''}
                 </div>
               ` : ''}
+
+              ${this.renderEnergyInfo()}
             </div>
 
             <div class="sensors-panel ${isCompact ? 'compact' : ''}">
@@ -609,16 +723,53 @@ export class BoilerCard extends LitElement {
         height: 225px;
       }
 
+      /* Animations */
       @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.6; }
+      }
+
+      @keyframes bubble-rise {
+        0% {
+          transform: translateY(0);
+          opacity: 0.7;
+        }
+        100% {
+          transform: translateY(-200px);
+          opacity: 0;
+        }
       }
 
       .heating-pulse {
         animation: pulse 1.5s ease-in-out infinite;
       }
 
-      .heating-indicator {
+      .bubble {
+        animation: bubble-rise 3s ease-in infinite;
+      }
+
+      .bubble-1 {
+        animation-delay: 0s;
+        animation-duration: 3s;
+      }
+
+      .bubble-2 {
+        animation-delay: 0.7s;
+        animation-duration: 3.5s;
+      }
+
+      .bubble-3 {
+        animation-delay: 1.4s;
+        animation-duration: 2.8s;
+      }
+
+      .bubble-4 {
+        animation-delay: 2.1s;
+        animation-duration: 3.2s;
+      }
+
+      /* Heating indicators */
+      .heating-indicator, .heating-source {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -630,13 +781,58 @@ export class BoilerCard extends LitElement {
         animation: pulse 2s ease-in-out infinite;
       }
 
-      .heating-indicator.compact {
+      .heating-sources {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .heating-indicator.compact, .heating-source.compact {
         padding: 6px 12px;
         font-size: 0.9em;
       }
 
       .heating-icon {
         font-size: 20px;
+      }
+
+      .priority {
+        font-size: 0.8em;
+        opacity: 0.7;
+        margin-left: auto;
+      }
+
+      /* Energy info */
+      .energy-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 12px;
+        background: var(--secondary-background-color);
+        border-radius: 12px;
+        font-size: 13px;
+      }
+
+      .energy-label {
+        color: var(--secondary-text-color);
+        font-weight: 500;
+      }
+
+      .energy-values {
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+      }
+
+      .energy-power {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--primary-color);
+      }
+
+      .energy-cost {
+        font-size: 12px;
+        color: var(--secondary-text-color);
       }
 
       .target-temp {
@@ -702,6 +898,12 @@ export class BoilerCard extends LitElement {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
+      .sensor-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
       .sensor-label {
         font-size: 14px;
         color: var(--secondary-text-color);
@@ -716,6 +918,22 @@ export class BoilerCard extends LitElement {
 
       .sensor-row.compact .sensor-value {
         font-size: 16px;
+      }
+
+      /* Sparkline */
+      .sparkline {
+        opacity: 0.6;
+        color: var(--primary-color);
+      }
+
+      .sensor-row.unavailable {
+        opacity: 0.6;
+        background: rgba(244, 67, 54, 0.1);
+        border: 1px solid var(--error-color, #f44336);
+      }
+
+      .sensor-row.unavailable .sensor-value {
+        color: var(--error-color, #f44336) !important;
       }
 
       .average-temp {
@@ -804,17 +1022,6 @@ export class BoilerCard extends LitElement {
         font-style: italic;
       }
 
-      .sensor-row.unavailable {
-        opacity: 0.6;
-        background: var(--error-color, #f44336);
-        background: rgba(244, 67, 54, 0.1);
-        border: 1px solid var(--error-color, #f44336);
-      }
-
-      .sensor-row.unavailable .sensor-value {
-        color: var(--error-color, #f44336) !important;
-      }
-
       @media (max-width: 600px) {
         .boiler-container {
           flex-direction: column;
@@ -847,17 +1054,18 @@ export class BoilerCard extends LitElement {
       show_average: true,
       show_gradient: true,
       show_stratification: true,
+      show_sparkline: false,
       display_mode: 'normal',
       heating_type: 'electric',
       min_temp: 0,
       max_temp: 80,
       enable_more_info: true,
+      advanced_animations: true,
       sensors: []
     };
   }
 }
 
-// Register the card
 (window as any).customCards = (window as any).customCards || [];
 (window as any).customCards.push({
   type: 'ha-boiler-card',

@@ -1,6 +1,6 @@
 {
   "name": "ha-boiler-card",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Custom Home Assistant card for displaying water heater/boiler with temperature sensors",
   "main": "dist/ha-boiler-card.js",
   "scripts": {

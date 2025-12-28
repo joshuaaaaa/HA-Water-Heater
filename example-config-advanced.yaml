@@ -255,3 +255,206 @@ heating_entity: binary_sensor.hp_active
 sensors:
   - entity: sensor.temp
     position: 3
+
+---
+
+# ================================================
+# NOVÉ FUNKCE V1.2.0
+# ================================================
+
+# ================================================
+# Příklad 9: Sledování spotřeby energie
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler se spotřebou
+display_mode: normal
+heating_type: electric
+show_average: true
+show_gradient: true
+show_stratification: true
+min_temp: 0
+max_temp: 80
+heating_entity: binary_sensor.boiler_heating
+target_temp_entity: input_number.boiler_target_temp
+# NOVÉ v1.2.0: Sledování spotřeby
+power_entity: sensor.boiler_power  # Senzor výkonu v W
+energy_cost: 4.5  # Cena za kWh (např. 4.50 Kč/kWh)
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Horní
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střední
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dolní
+    position: 5
+
+---
+
+# ================================================
+# Příklad 10: Mini grafy trendu teplot
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler s grafy
+display_mode: normal
+heating_type: electric
+show_average: true
+show_gradient: true
+show_stratification: true
+# NOVÉ v1.2.0: Mini sparkline grafy
+show_sparkline: true  # Zobrazí trendy teplot za posledních 30 minut
+min_temp: 0
+max_temp: 80
+heating_entity: binary_sensor.boiler_heating
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Horní
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střední
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dolní
+    position: 5
+
+---
+
+# ================================================
+# Příklad 11: Hybridní systém - solární + elektrické dohřívání
+# ================================================
+type: custom:ha-boiler-card
+title: Hybridní ohřev
+display_mode: normal
+show_average: true
+show_gradient: true
+show_stratification: true
+min_temp: 0
+max_temp: 95
+target_temp_entity: input_number.boiler_target_temp
+# NOVÉ v1.2.0: Podpora více zdrojů ohřevu
+heating_sources:
+  - entity: binary_sensor.solar_collector_active
+    type: solar
+    name: Solární kolektor
+    priority: 1  # Priorita 1 = primární zdroj
+  - entity: binary_sensor.electric_heater_active
+    type: electric
+    name: Elektrické dohřívání
+    priority: 2  # Priorita 2 = sekundární zdroj
+# Údržba
+anode_last_change: '2024-01-15'
+cleaning_last_date: '2024-06-01'
+sensors:
+  - entity: sensor.hybrid_tank_top
+    name: Horní výstup
+    position: 1
+  - entity: sensor.hybrid_tank_solar
+    name: Solární zóna
+    position: 3
+  - entity: sensor.hybrid_tank_electric
+    name: Elektrická spirála
+    position: 4
+  - entity: sensor.hybrid_tank_bottom
+    name: Vstup studené
+    position: 5
+
+---
+
+# ================================================
+# Příklad 12: Profesionální vzhled s animacemi
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler Premium
+display_mode: normal
+heating_type: electric
+show_average: true
+show_gradient: true
+show_stratification: true
+# NOVÉ v1.2.0: Pokročilé animace
+advanced_animations: true  # Bubliny při ohřevu
+min_temp: 0
+max_temp: 80
+low_temp_warning: 40
+heating_entity: binary_sensor.boiler_heating
+target_temp_entity: input_number.boiler_target_temp
+anode_last_change: '2024-01-15'
+anode_change_interval: 365
+cleaning_last_date: '2024-06-01'
+cleaning_interval: 180
+sensors:
+  - entity: sensor.boiler_temp_1
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_2
+    name: Horní střed
+    position: 2
+  - entity: sensor.boiler_temp_3
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_4
+    name: Dolní střed
+    position: 4
+  - entity: sensor.boiler_temp_5
+    name: Dno
+    position: 5
+
+---
+
+# ================================================
+# Příklad 13: Kompletní systém se VŠEMI funkcemi v1.2.0
+# ================================================
+type: custom:ha-boiler-card
+title: Kompletní bojler v1.2.0
+display_mode: normal
+heating_type: electric
+# Základní zobrazení
+show_average: true
+show_gradient: true
+show_stratification: true
+show_sparkline: true  # NOVÉ: Mini grafy
+# Rozsah teplot
+min_temp: 0
+max_temp: 80
+low_temp_warning: 40
+# More-info při kliknutí
+enable_more_info: true
+# Ohřev
+target_temp_entity: input_number.boiler_target_temp
+# NOVÉ: Více zdrojů ohřevu
+heating_sources:
+  - entity: binary_sensor.solar_active
+    type: solar
+    name: Solární kolektor
+    priority: 1
+  - entity: binary_sensor.electric_heater
+    type: electric
+    name: Elektrický ohřev
+    priority: 2
+# NOVÉ: Spotřeba
+power_entity: sensor.boiler_power
+energy_cost: 4.5
+# NOVÉ: Animace
+advanced_animations: true
+# Údržba
+anode_last_change: '2024-01-15'
+anode_change_interval: 365
+cleaning_last_date: '2024-06-01'
+cleaning_interval: 180
+# Senzory
+sensors:
+  - entity: sensor.boiler_temp_1
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_2
+    name: Horní střed
+    position: 2
+  - entity: sensor.boiler_temp_3
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_4
+    name: Dolní střed
+    position: 4
+  - entity: sensor.boiler_temp_5
+    name: Dno
+    position: 5

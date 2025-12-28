@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2024-12-28
+
+### Added
+- **Energy consumption tracking**: Display real-time power usage and cost per hour
+  - New `power_entity` configuration option for linking power meter
+  - New `energy_cost` configuration option for cost per kWh
+  - Shows consumption info: "💡 Spotřeba: X.XX kW (X.XX Kč/h)"
+- **Mini sparkline graphs**: Visual temperature trend graphs next to sensor labels
+  - New `show_sparkline` boolean option (default: false)
+  - Displays 30-minute temperature history as compact SVG line graph
+  - Auto-scales to temperature range for optimal visualization
+- **Dual-source heating support**: Support for multiple heating sources (solar + electric, etc.)
+  - New `heating_sources` array configuration with entity, type, name, and priority
+  - Automatically displays active heating sources sorted by priority
+  - Shows icons for different heating types (⚡ electric, ☀️ solar, 🔥 gas, 🌡️ heat pump)
+- **Advanced animations**: Professional bubble animations during heating
+  - New `advanced_animations` boolean option (default: false)
+  - Animated rising bubbles in boiler when heating is active
+  - Staggered animation timing for realistic effect
+
+### Removed
+- Debug console.log statements from production code
+- firstUpdated() debug lifecycle hook
+- All testing-only code and comments
+
+### Changed
+- Cleaned up codebase to production-ready state
+- Improved code organization and readability
+- Enhanced animation performance
+
 ## [1.1.2] - 2024-12-28
 
 ### Fixed

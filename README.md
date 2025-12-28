@@ -13,10 +13,14 @@ Custom Home Assistant Lovelace card pro zobrazení bojleru/ohřívače vody s te
 - 📊 **Automatický výpočet průměrné teploty**
 - 🎨 **Barevná gradace** podle teploty (modrá → zelená → žlutá → oranžová → červená)
 - 📐 **Režimy zobrazení**: Normální / Kompaktní
+- 📈 **Mini sparkline grafy** - trendy teplot za posledních 30 minut (v1.2.0)
+- 💫 **Pokročilé animace** - efekt bublinek při ohřevu (v1.2.0)
 
 ### Ohřev a monitoring
 - 🔥 **Indikátor ohřívání** s animací podle typu zdroje
 - ⚡ **Ikony typu ohřevu**: Elektřina, Solár, Plyn, Tepelné čerpadlo
+- 🔌 **Sledování spotřeby energie** - aktuální výkon a náklady (v1.2.0)
+- 🌞⚡ **Hybridní ohřev** - podpora více zdrojů (solár + elektřina) (v1.2.0)
 - 🎯 **Zobrazení cílové teploty**
 - ⏱️ **Odhad času do dosažení cílové teploty** (při aktivním ohřevu)
 - ⚠️ **Upozornění na nízkou teplotu** (konfigurovatelný práh)
@@ -89,7 +93,7 @@ sensors:
     position: 5
 ```
 
-### Pokročilá konfigurace se všemi funkcemi
+### Pokročilá konfigurace se všemi funkcemi v1.2.0
 
 ```yaml
 type: custom:ha-boiler-card
@@ -105,6 +109,8 @@ heating_type: electric  # 'electric', 'solar', 'gas', 'heat_pump'
 show_average: true
 show_gradient: true
 show_stratification: true  # Barevné vrstvy teplot
+show_sparkline: true  # NOVÉ v1.2.0: Mini grafy trendu
+advanced_animations: true  # NOVÉ v1.2.0: Bubliny při ohřevu
 
 # Rozsah teplot
 min_temp: 0
@@ -114,8 +120,22 @@ max_temp: 80
 low_temp_warning: 35  # Upozornění když teplota klesne pod 35°C
 
 # Entity
-heating_entity: binary_sensor.boiler_heating
 target_temp_entity: number.boiler_target_temp
+
+# NOVÉ v1.2.0: Hybridní ohřev (více zdrojů)
+heating_sources:
+  - entity: binary_sensor.solar_collector_active
+    type: solar
+    name: Solární kolektor
+    priority: 1
+  - entity: binary_sensor.electric_heater_active
+    type: electric
+    name: Elektrický ohřev
+    priority: 2
+
+# NOVÉ v1.2.0: Sledování spotřeby
+power_entity: sensor.boiler_power  # Výkon v W
+energy_cost: 4.5  # Kč/kWh
 
 # Interakce
 enable_more_info: true  # Kliknutí na senzor otevře more-info
@@ -165,6 +185,8 @@ sensors:
 | `show_average` | boolean | `true` | Zobrazit průměrnou teplotu |
 | `show_gradient` | boolean | `true` | Barevná gradace podle teploty |
 | `show_stratification` | boolean | `true` | Zobrazit teplotní vrstvy (stratifikaci) |
+| `show_sparkline` | boolean | `false` | **NOVÉ v1.2.0**: Mini grafy trendu teplot (30 min historie) |
+| `advanced_animations` | boolean | `false` | **NOVÉ v1.2.0**: Pokročilé animace (bubliny při ohřevu) |
 | `min_temp` | number | `0` | Minimální teplota pro barevnou škálu |
 | `max_temp` | number | `100` | Maximální teplota pro barevnou škálu |
 
@@ -175,6 +197,33 @@ sensors:
 | `heating_entity` | string | - | Entita indikující ohřívání |
 | `target_temp_entity` | string | - | Entita cílové teploty (+ odhad času) |
 | `heating_type` | string | `electric` | Typ: `electric` ⚡, `solar` ☀️, `gas` 🔥, `heat_pump` 🌡️ |
+| `heating_sources` | list | - | **NOVÉ v1.2.0**: Pole více zdrojů ohřevu (hybridní systémy) |
+| `power_entity` | string | - | **NOVÉ v1.2.0**: Entita senzoru výkonu (W) pro sledování spotřeby |
+| `energy_cost` | number | - | **NOVÉ v1.2.0**: Cena za kWh (např. 4.5 pro 4.50 Kč/kWh) |
+
+#### Konfigurace heating_sources (v1.2.0)
+
+Pole objektů pro hybridní systémy s více zdroji ohřevu:
+
+| Parametr | Typ | Povinný | Popis |
+|----------|-----|---------|-------|
+| `entity` | string | Ano | Entita binary_sensor pro detekci aktivity zdroje |
+| `type` | string | Ano | Typ: `electric`, `solar`, `gas`, `heat_pump` |
+| `name` | string | Ne | Název zdroje (zobrazí se při aktivitě) |
+| `priority` | number | Ne | Priorita zdroje (1 = nejvyšší, zobrazí se první) |
+
+Příklad:
+```yaml
+heating_sources:
+  - entity: binary_sensor.solar_collector_active
+    type: solar
+    name: Solární kolektor
+    priority: 1
+  - entity: binary_sensor.electric_heater_active
+    type: electric
+    name: Elektrické dohřívání
+    priority: 2
+```
 
 ### Upozornění a údržba
 
