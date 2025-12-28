@@ -1068,7 +1068,7 @@ export class BoilerCard extends LitElement {
 
 (window as any).customCards = (window as any).customCards || [];
 (window as any).customCards.push({
-  type: 'ha-boiler-card',
+  type: 'custom:ha-boiler-card',
   name: 'Boiler Card',
   description: 'Custom card for displaying water heater with temperature sensors',
 });
