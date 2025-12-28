@@ -57,6 +57,18 @@ export class BoilerCard extends LitElement {
       enable_more_info: true,
       ...config,
     };
+    console.log('HA Boiler Card: Config set', this.config);
+  }
+
+  protected firstUpdated(changedProps: PropertyValues): void {
+    super.firstUpdated(changedProps);
+    console.log('HA Boiler Card: First update', {
+      hasConfig: !!this.config,
+      hasHass: !!this.hass,
+      hasStates: !!this.hass?.states,
+      statesCount: this.hass?.states ? Object.keys(this.hass.states).length : 0,
+      sensors: this.config?.sensors?.map(s => s.entity)
+    });
   }
 
   protected shouldUpdate(changedProps: PropertyValues): boolean {
@@ -64,9 +76,13 @@ export class BoilerCard extends LitElement {
       return false;
     }
 
-    // Track temperature history for trend calculation
-    if (changedProps.has('hass') && this.hass && this.config.target_temp_entity) {
-      this.updateTempHistory();
+    // Always update when hass changes (entity states update)
+    if (changedProps.has('hass')) {
+      // Track temperature history for trend calculation
+      if (this.hass?.states && this.config.target_temp_entity) {
+        this.updateTempHistory();
+      }
+      return true;
     }
 
     return true;
@@ -95,6 +111,7 @@ export class BoilerCard extends LitElement {
   }
 
   private getSensorValue(entityId: string): number | null {
+    if (!this.hass?.states) return null;
     const state = this.hass.states[entityId];
     if (!state) return null;
     const value = parseFloat(state.state);
@@ -115,7 +132,7 @@ export class BoilerCard extends LitElement {
   }
 
   private isHeating(): boolean {
-    if (!this.config.heating_entity) return false;
+    if (!this.config.heating_entity || !this.hass?.states) return false;
     const state = this.hass.states[this.config.heating_entity];
     return state && (state.state === 'on' || state.state === 'heating');
   }
@@ -430,7 +447,18 @@ export class BoilerCard extends LitElement {
     }
 
     if (!this.hass) {
-      return html`<ha-card><div class="card-content" style="padding: 16px;">Načítání...</div></ha-card>`;
+      return html`<ha-card><div class="card-content" style="padding: 16px;">Načítání Home Assistant...</div></ha-card>`;
+    }
+
+    if (!this.hass.states) {
+      console.warn('HA Boiler Card: hass.states is undefined');
+      return html`<ha-card><div class="card-content" style="padding: 16px;">Čekání na entity...</div></ha-card>`;
+    }
+
+    const statesCount = Object.keys(this.hass.states).length;
+    if (statesCount === 0) {
+      console.warn('HA Boiler Card: No entities loaded');
+      return html`<ha-card><div class="card-content" style="padding: 16px;">Žádné entity nenalezeny. Počet entit: ${statesCount}</div></ha-card>`;
     }
 
     const avgTemp = this.getAverageTemperature();

@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2024-12-28
+
+### Fixed
+- **Critical:** Fixed issue where card couldn't access Home Assistant entities
+- Added optional chaining (`?.`) to all `hass.states` access to prevent crashes
+- Fixed `getSensorValue()` to safely check if `hass.states` exists
+- Fixed `isHeating()` to safely check for entity before accessing
+- Improved `shouldUpdate()` to properly handle hass updates
+
+### Added
+- Debug console logging for diagnostics
+- `firstUpdated()` lifecycle hook with debug information
+- Better loading state messages showing exact issue:
+  - "Načítání Home Assistant..." - when hass is loading
+  - "Čekání na entity..." - when hass.states is undefined
+  - "Žádné entity nenalezeny" - when no entities are loaded
+- Console warnings when entities can't be loaded
+
+### Changed
+- Enhanced error messages to be more specific about what's wrong
+- Loading states now show progress through initialization
+
+## [1.1.1] - 2024-12-28
+
+### Fixed
+- Fixed issue with card not displaying when sensors selected
+- Card now always renders with helpful error messages
+
+### Added
+- Visual warnings for missing entities (red background, ⚠️ icon)
+- Tooltip showing entity ID when unavailable
+- TROUBLESHOOTING.md guide
+
 ## [1.1.0] - 2024-12-28
 
 ### Added - Quick Wins Features
