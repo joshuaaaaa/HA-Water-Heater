@@ -1,0 +1,257 @@
+# ================================================
+# Pokročilé příklady konfigurace s NOVÝMI FUNKCEMI
+# ================================================
+
+# ================================================
+# Příklad 1: Kompletní konfigurace se všemi funkcemi
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler v koupelně
+# Režim zobrazení: 'normal' nebo 'compact'
+display_mode: normal
+# Typ ohřevu: 'electric', 'solar', 'gas', 'heat_pump'
+heating_type: electric
+# Zobrazení
+show_average: true
+show_gradient: true
+show_stratification: true  # NOVÉ: Barevné vrstvy podle teplot
+# Rozsah teplot
+min_temp: 0
+max_temp: 80
+# Upozornění na nízkou teplotu
+low_temp_warning: 35  # NOVÉ: Varování když teplota klesne pod 35°C
+# Kliknutí na senzor otevře more-info
+enable_more_info: true  # NOVÉ
+# Entity
+heating_entity: binary_sensor.boiler_heating
+target_temp_entity: number.boiler_target_temp
+# Údržba - kontrola anody
+anode_last_change: '2024-01-15'  # NOVÉ: Datum poslední výměny (ISO 8601)
+anode_change_interval: 365  # NOVÉ: Interval výměny ve dnech
+# Údržba - čištění
+cleaning_last_date: '2024-11-01'  # NOVÉ: Datum posledního čištění
+cleaning_interval: 180  # NOVÉ: Interval čištění ve dnech (6 měsíců)
+# Senzory
+sensors:
+  - entity: sensor.boiler_temp_1
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_2
+    name: Horní střed
+    position: 2
+  - entity: sensor.boiler_temp_3
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_4
+    name: Dolní střed
+    position: 4
+  - entity: sensor.boiler_temp_5
+    name: Dno
+    position: 5
+
+---
+
+# ================================================
+# Příklad 2: Solární bojler s pokročilými funkcemi
+# ================================================
+type: custom:ha-boiler-card
+title: Solární ohřev vody
+display_mode: normal
+heating_type: solar  # NOVÉ: Zobrazí ikonu ☀️
+show_stratification: true
+min_temp: 15
+max_temp: 95
+low_temp_warning: 45
+heating_entity: binary_sensor.solar_collector_active
+target_temp_entity: input_number.solar_target_temperature
+# Údržba
+anode_last_change: '2023-12-10'
+anode_change_interval: 548  # 1.5 roku pro solární systém
+cleaning_last_date: '2024-09-20'
+cleaning_interval: 180
+sensors:
+  - entity: sensor.solar_tank_sensor_1
+    name: Horní zóna (odběr)
+    position: 1
+  - entity: sensor.solar_tank_sensor_3
+    name: Střední
+    position: 3
+  - entity: sensor.solar_tank_sensor_5
+    name: Dolní zóna (solární přívod)
+    position: 5
+
+---
+
+# ================================================
+# Příklad 3: Tepelné čerpadlo - kompaktní režim
+# ================================================
+type: custom:ha-boiler-card
+title: Zásobník TČ
+display_mode: compact  # NOVÉ: Kompaktní zobrazení (menší velikost)
+heating_type: heat_pump  # NOVÉ: Zobrazí ikonu 🌡️
+show_average: true
+show_gradient: false
+show_stratification: true  # Barevné vrstvy jsou vidět i bez gradientu
+min_temp: 5
+max_temp: 65
+low_temp_warning: 30
+heating_entity: binary_sensor.heat_pump_dhw_active
+target_temp_entity: climate.heat_pump_water_heater
+anode_last_change: '2024-03-20'
+cleaning_last_date: '2024-10-15'
+sensors:
+  - entity: sensor.hp_tank_top
+    name: TUV výstup
+    position: 1
+  - entity: sensor.hp_tank_middle
+    name: Střed
+    position: 3
+  - entity: sensor.hp_tank_bottom
+    name: Vstup z TČ
+    position: 5
+
+---
+
+# ================================================
+# Příklad 4: Plynový ohřívač
+# ================================================
+type: custom:ha-boiler-card
+title: Plynový průtokový ohřívač
+display_mode: compact
+heating_type: gas  # NOVÉ: Zobrazí ikonu 🔥
+show_average: true
+show_stratification: false  # Vypnuto pro průtokový ohřívač
+min_temp: 10
+max_temp: 75
+low_temp_warning: 40
+enable_more_info: true
+heating_entity: binary_sensor.gas_heater_active
+target_temp_entity: number.gas_heater_setpoint
+anode_last_change: '2024-06-01'
+anode_change_interval: 730  # 2 roky
+cleaning_last_date: '2024-08-15'
+cleaning_interval: 365  # Roční čištění
+sensors:
+  - entity: sensor.gas_heater_outlet_temp
+    name: Výstup
+    position: 1
+  - entity: sensor.gas_heater_inlet_temp
+    name: Vstup
+    position: 5
+
+---
+
+# ================================================
+# Příklad 5: Elektrický bojler - pouze varování údržby
+# ================================================
+type: custom:ha-boiler-card
+title: Elektrický bojler
+heating_type: electric  # NOVÉ: Zobrazí ikonu ⚡
+show_average: true
+show_gradient: true
+show_stratification: true
+min_temp: 0
+max_temp: 80
+low_temp_warning: 45  # Legionella prevence
+# Pouze údržba, bez ohřevu
+anode_last_change: '2023-11-20'
+anode_change_interval: 365
+cleaning_last_date: '2024-05-10'
+cleaning_interval: 180
+sensors:
+  - entity: sensor.electric_boiler_top
+    position: 1
+  - entity: sensor.electric_boiler_bottom
+    position: 5
+
+---
+
+# ================================================
+# Příklad 6: Minimální konfigurace s údržbou
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler
+# Pouze kontrola údržby, žádné další funkce
+anode_last_change: '2024-01-01'
+cleaning_last_date: '2024-06-15'
+sensors:
+  - entity: sensor.boiler_temp
+    position: 3
+
+---
+
+# ================================================
+# Příklad 7: Vizualizace stratifikace bez jiných funkcí
+# ================================================
+type: custom:ha-boiler-card
+title: Teplotní vrstvy
+display_mode: normal
+show_stratification: true  # NOVÉ: Hlavní funkce
+show_gradient: false  # Vypnuto, aby byly vidět jen vrstvy
+show_average: true
+min_temp: 20
+max_temp: 70
+sensors:
+  - entity: sensor.layer_1
+    name: Vrstva 1
+    position: 1
+  - entity: sensor.layer_2
+    name: Vrstva 2
+    position: 2
+  - entity: sensor.layer_3
+    name: Vrstva 3
+    position: 3
+  - entity: sensor.layer_4
+    name: Vrstva 4
+    position: 4
+  - entity: sensor.layer_5
+    name: Vrstva 5
+    position: 5
+
+---
+
+# ================================================
+# Příklad 8: Všechny typy ohřevu (demonstrace)
+# ================================================
+
+# Elektrický
+type: custom:ha-boiler-card
+title: Elektrický
+heating_type: electric  # ⚡
+heating_entity: binary_sensor.heating
+sensors:
+  - entity: sensor.temp
+    position: 3
+
+---
+
+# Solární
+type: custom:ha-boiler-card
+title: Solární
+heating_type: solar  # ☀️
+heating_entity: binary_sensor.solar_active
+sensors:
+  - entity: sensor.temp
+    position: 3
+
+---
+
+# Plynový
+type: custom:ha-boiler-card
+title: Plynový
+heating_type: gas  # 🔥
+heating_entity: binary_sensor.gas_burner
+sensors:
+  - entity: sensor.temp
+    position: 3
+
+---
+
+# Tepelné čerpadlo
+type: custom:ha-boiler-card
+title: TČ
+heating_type: heat_pump  # 🌡️
+heating_entity: binary_sensor.hp_active
+sensors:
+  - entity: sensor.temp
+    position: 3

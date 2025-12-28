@@ -10,8 +10,17 @@ interface BoilerCardConfig extends LovelaceCardConfig {
   target_temp_entity?: string;
   show_average?: boolean;
   show_gradient?: boolean;
+  show_stratification?: boolean;
   min_temp?: number;
   max_temp?: number;
+  display_mode?: 'normal' | 'compact';
+  heating_type?: 'electric' | 'solar' | 'gas' | 'heat_pump';
+  low_temp_warning?: number;
+  anode_last_change?: string; // ISO date
+  anode_change_interval?: number; // days
+  cleaning_last_date?: string; // ISO date
+  cleaning_interval?: number; // days
+  enable_more_info?: boolean;
 }
 
 interface SensorConfig {
@@ -20,10 +29,16 @@ interface SensorConfig {
   position?: number; // 1-5 from top to bottom
 }
 
+interface TempHistory {
+  value: number;
+  timestamp: number;
+}
+
 @customElement('ha-boiler-card')
 export class BoilerCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private config!: BoilerCardConfig;
+  @state() private tempHistory: Map<string, TempHistory[]> = new Map();
 
   public setConfig(config: BoilerCardConfig): void {
     if (!config) {
@@ -32,8 +47,14 @@ export class BoilerCard extends LitElement {
     this.config = {
       show_average: true,
       show_gradient: true,
+      show_stratification: true,
       min_temp: 0,
       max_temp: 100,
+      display_mode: 'normal',
+      heating_type: 'electric',
+      anode_change_interval: 365,
+      cleaning_interval: 180,
+      enable_more_info: true,
       ...config,
     };
   }
@@ -42,7 +63,35 @@ export class BoilerCard extends LitElement {
     if (!this.config) {
       return false;
     }
+
+    // Track temperature history for trend calculation
+    if (changedProps.has('hass') && this.hass && this.config.target_temp_entity) {
+      this.updateTempHistory();
+    }
+
     return true;
+  }
+
+  private updateTempHistory(): void {
+    const avgTemp = this.getAverageTemperature();
+    if (avgTemp === null) return;
+
+    const now = Date.now();
+    const key = 'average';
+
+    if (!this.tempHistory.has(key)) {
+      this.tempHistory.set(key, []);
+    }
+
+    const history = this.tempHistory.get(key)!;
+    history.push({ value: avgTemp, timestamp: now });
+
+    // Keep only last 30 minutes of history
+    const thirtyMinutesAgo = now - 30 * 60 * 1000;
+    this.tempHistory.set(
+      key,
+      history.filter(h => h.timestamp > thirtyMinutesAgo)
+    );
   }
 
   private getSensorValue(entityId: string): number | null {
@@ -92,6 +141,130 @@ export class BoilerCard extends LitElement {
     }
   }
 
+  private getHeatingIcon(): string {
+    switch (this.config.heating_type) {
+      case 'solar': return '☀️';
+      case 'gas': return '🔥';
+      case 'heat_pump': return '🌡️';
+      case 'electric':
+      default: return '⚡';
+    }
+  }
+
+  private getHeatingLabel(): string {
+    switch (this.config.heating_type) {
+      case 'solar': return 'Solární ohřev';
+      case 'gas': return 'Plynový ohřev';
+      case 'heat_pump': return 'Tepelné čerpadlo';
+      case 'electric':
+      default: return 'Elektrický ohřev';
+    }
+  }
+
+  private calculateTimeToTarget(): string | null {
+    if (!this.config.target_temp_entity) return null;
+
+    const targetTemp = this.getSensorValue(this.config.target_temp_entity);
+    const avgTemp = this.getAverageTemperature();
+
+    if (targetTemp === null || avgTemp === null) return null;
+    if (avgTemp >= targetTemp) return null;
+    if (!this.isHeating()) return null;
+
+    const history = this.tempHistory.get('average');
+    if (!history || history.length < 2) return null;
+
+    // Calculate heating rate (°C per minute)
+    const oldest = history[0];
+    const newest = history[history.length - 1];
+    const timeDiff = (newest.timestamp - oldest.timestamp) / 1000 / 60; // minutes
+    const tempDiff = newest.value - oldest.value;
+
+    if (timeDiff < 5 || tempDiff <= 0) return null; // Not enough data or cooling
+
+    const heatingRate = tempDiff / timeDiff; // °C per minute
+    const remainingTemp = targetTemp - avgTemp;
+    const minutesToTarget = Math.ceil(remainingTemp / heatingRate);
+
+    if (minutesToTarget < 60) {
+      return `~${minutesToTarget} min`;
+    } else {
+      const hours = Math.floor(minutesToTarget / 60);
+      const minutes = minutesToTarget % 60;
+      return `~${hours}h ${minutes}min`;
+    }
+  }
+
+  private getDaysSince(dateString?: string): number | null {
+    if (!dateString) return null;
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch {
+      return null;
+    }
+  }
+
+  private getMaintenanceStatus(daysSince: number | null, interval: number): { status: 'ok' | 'warning' | 'overdue', text: string } {
+    if (daysSince === null) {
+      return { status: 'ok', text: 'Nenastaveno' };
+    }
+
+    const remaining = interval - daysSince;
+
+    if (remaining <= 0) {
+      return { status: 'overdue', text: `Po termínu (${-remaining} dní)` };
+    } else if (remaining <= 30) {
+      return { status: 'warning', text: `Zbývá ${remaining} dní` };
+    } else {
+      return { status: 'ok', text: `Zbývá ${remaining} dní` };
+    }
+  }
+
+  private hasLowTempWarning(): boolean {
+    if (!this.config.low_temp_warning) return false;
+    const avgTemp = this.getAverageTemperature();
+    return avgTemp !== null && avgTemp < this.config.low_temp_warning;
+  }
+
+  private renderStratificationLayers(): TemplateResult {
+    if (!this.config.show_stratification || !this.config.sensors) {
+      return html``;
+    }
+
+    const sortedSensors = [...this.config.sensors].sort((a, b) => {
+      const posA = a.position || 0;
+      const posB = b.position || 0;
+      return posA - posB;
+    });
+
+    const layers = sortedSensors.map((sensor, index) => {
+      const temp = this.getSensorValue(sensor.entity);
+      const color = this.getTemperatureColor(temp);
+
+      // Calculate position (5 layers max)
+      const layerHeight = 200 / 5; // Tank height 200px, 5 positions
+      const position = (sensor.position || 1) - 1;
+      const y = 50 + position * layerHeight;
+
+      return html`
+        <rect
+          x="51"
+          y="${y + 1}"
+          width="98"
+          height="${layerHeight - 2}"
+          fill="${color}"
+          opacity="0.4"
+        />
+      `;
+    });
+
+    return html`${layers}`;
+  }
+
   private renderBoilerSVG(): TemplateResult {
     const isHeating = this.isHeating();
     const avgTemp = this.getAverageTemperature();
@@ -99,8 +272,13 @@ export class BoilerCard extends LitElement {
       ? this.getTemperatureColor(avgTemp)
       : '#4A90E2';
 
+    const isCompact = this.config.display_mode === 'compact';
+    const width = isCompact ? 150 : 200;
+    const height = isCompact ? 225 : 300;
+    const scale = isCompact ? 0.75 : 1;
+
     return html`
-      <svg class="boiler-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+      <svg class="boiler-svg ${isCompact ? 'compact' : ''}" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
         <!-- Main boiler tank -->
         <defs>
           <linearGradient id="boilerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -118,9 +296,12 @@ export class BoilerCard extends LitElement {
           </filter>
         </defs>
 
+        <!-- Temperature stratification layers -->
+        ${this.renderStratificationLayers()}
+
         <!-- Tank body -->
         <rect x="50" y="50" width="100" height="200" rx="10" ry="10"
-              fill="url(#boilerGradient)"
+              fill="${this.config.show_stratification ? 'none' : 'url(#boilerGradient)'}"
               stroke="#333"
               stroke-width="2"/>
 
@@ -163,19 +344,76 @@ export class BoilerCard extends LitElement {
     `;
   }
 
+  private handleSensorClick(entityId: string): void {
+    if (!this.config.enable_more_info) return;
+
+    const event = new CustomEvent('hass-more-info', {
+      detail: { entityId },
+      bubbles: true,
+      composed: true,
+    });
+    this.dispatchEvent(event);
+  }
+
   private renderSensor(sensor: SensorConfig, index: number): TemplateResult {
     const temp = this.getSensorValue(sensor.entity);
     const state = this.hass.states[sensor.entity];
     const unit = state?.attributes?.unit_of_measurement || '°C';
     const name = sensor.name || state?.attributes?.friendly_name || sensor.entity;
     const color = this.getTemperatureColor(temp);
+    const isCompact = this.config.display_mode === 'compact';
 
     return html`
-      <div class="sensor-row">
+      <div
+        class="sensor-row ${this.config.enable_more_info ? 'clickable' : ''} ${isCompact ? 'compact' : ''}"
+        @click=${() => this.handleSensorClick(sensor.entity)}
+      >
         <div class="sensor-label">${name}</div>
         <div class="sensor-value" style="color: ${color}">
           ${temp !== null ? temp.toFixed(1) : '--'} ${unit}
         </div>
+      </div>
+    `;
+  }
+
+  private renderMaintenanceInfo(): TemplateResult {
+    const anodeDays = this.getDaysSince(this.config.anode_last_change);
+    const cleaningDays = this.getDaysSince(this.config.cleaning_last_date);
+
+    const anodeStatus = this.getMaintenanceStatus(anodeDays, this.config.anode_change_interval || 365);
+    const cleaningStatus = this.getMaintenanceStatus(cleaningDays, this.config.cleaning_interval || 180);
+
+    if (anodeDays === null && cleaningDays === null) {
+      return html``;
+    }
+
+    return html`
+      <div class="maintenance-section">
+        <div class="maintenance-title">Údržba</div>
+
+        ${anodeDays !== null ? html`
+          <div class="maintenance-item ${anodeStatus.status}">
+            <div class="maintenance-label">
+              <span class="maintenance-icon">🔧</span>
+              Anoda
+            </div>
+            <div class="maintenance-value">
+              ${anodeStatus.text}
+            </div>
+          </div>
+        ` : ''}
+
+        ${cleaningDays !== null ? html`
+          <div class="maintenance-item ${cleaningStatus.status}">
+            <div class="maintenance-label">
+              <span class="maintenance-icon">🧹</span>
+              Čištění
+            </div>
+            <div class="maintenance-value">
+              ${cleaningStatus.text}
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -190,6 +428,9 @@ export class BoilerCard extends LitElement {
       ? this.getSensorValue(this.config.target_temp_entity)
       : null;
     const isHeating = this.isHeating();
+    const timeToTarget = this.calculateTimeToTarget();
+    const hasLowTempWarning = this.hasLowTempWarning();
+    const isCompact = this.config.display_mode === 'compact';
 
     // Sort sensors by position
     const sortedSensors = [...(this.config.sensors || [])].sort((a, b) => {
@@ -200,28 +441,38 @@ export class BoilerCard extends LitElement {
 
     return html`
       <ha-card>
-        <div class="card-content">
+        <div class="card-content ${isCompact ? 'compact' : ''}">
           ${this.config.title ? html`<h2 class="card-title">${this.config.title}</h2>` : ''}
 
-          <div class="boiler-container">
+          ${hasLowTempWarning ? html`
+            <div class="warning-banner">
+              <span class="warning-icon">⚠️</span>
+              <span>Nízká teplota! (${avgTemp?.toFixed(1)}°C)</span>
+            </div>
+          ` : ''}
+
+          <div class="boiler-container ${isCompact ? 'compact' : ''}">
             <div class="boiler-visual">
               ${this.renderBoilerSVG()}
 
               ${isHeating ? html`
-                <div class="heating-indicator">
-                  <span class="heating-icon">🔥</span>
-                  <span>Ohřívání</span>
+                <div class="heating-indicator ${isCompact ? 'compact' : ''}">
+                  <span class="heating-icon">${this.getHeatingIcon()}</span>
+                  <span>${this.getHeatingLabel()}</span>
                 </div>
               ` : ''}
 
               ${targetTemp !== null ? html`
-                <div class="target-temp">
-                  Cílová: ${targetTemp.toFixed(1)}°C
+                <div class="target-temp ${isCompact ? 'compact' : ''}">
+                  <div>Cílová: ${targetTemp.toFixed(1)}°C</div>
+                  ${timeToTarget ? html`
+                    <div class="time-estimate">⏱️ ${timeToTarget}</div>
+                  ` : ''}
                 </div>
               ` : ''}
             </div>
 
-            <div class="sensors-panel">
+            <div class="sensors-panel ${isCompact ? 'compact' : ''}">
               ${sortedSensors.length > 0 ? html`
                 <div class="sensors-list">
                   ${sortedSensors.map((sensor, idx) => this.renderSensor(sensor, idx))}
@@ -231,13 +482,15 @@ export class BoilerCard extends LitElement {
               `}
 
               ${this.config.show_average && avgTemp !== null ? html`
-                <div class="average-temp">
+                <div class="average-temp ${isCompact ? 'compact' : ''}">
                   <div class="sensor-label">Průměrná teplota</div>
                   <div class="sensor-value average" style="color: ${this.getTemperatureColor(avgTemp)}">
                     ${avgTemp.toFixed(1)}°C
                   </div>
                 </div>
               ` : ''}
+
+              ${this.renderMaintenanceInfo()}
             </div>
           </div>
         </div>
@@ -266,11 +519,36 @@ export class BoilerCard extends LitElement {
         padding: 0;
       }
 
+      .card-content.compact {
+        font-size: 0.9em;
+      }
+
+      .warning-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: rgba(255, 152, 0, 0.15);
+        border-left: 4px solid #ff9800;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-weight: 500;
+        color: #ff9800;
+      }
+
+      .warning-icon {
+        font-size: 20px;
+      }
+
       .boiler-container {
         display: flex;
         gap: 24px;
         align-items: center;
         justify-content: space-around;
+      }
+
+      .boiler-container.compact {
+        gap: 16px;
       }
 
       .boiler-visual {
@@ -286,6 +564,11 @@ export class BoilerCard extends LitElement {
         width: 200px;
         height: 300px;
         filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+      }
+
+      .boiler-svg.compact {
+        width: 150px;
+        height: 225px;
       }
 
       @keyframes pulse {
@@ -309,6 +592,11 @@ export class BoilerCard extends LitElement {
         animation: pulse 2s ease-in-out infinite;
       }
 
+      .heating-indicator.compact {
+        padding: 6px 12px;
+        font-size: 0.9em;
+      }
+
       .heating-icon {
         font-size: 20px;
       }
@@ -319,6 +607,19 @@ export class BoilerCard extends LitElement {
         border-radius: 12px;
         font-size: 14px;
         color: var(--secondary-text-color);
+        text-align: center;
+      }
+
+      .target-temp.compact {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .time-estimate {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--primary-color);
+        font-weight: 500;
       }
 
       .sensors-panel {
@@ -327,6 +628,11 @@ export class BoilerCard extends LitElement {
         flex-direction: column;
         gap: 16px;
         min-width: 200px;
+      }
+
+      .sensors-panel.compact {
+        gap: 12px;
+        min-width: 180px;
       }
 
       .sensors-list {
@@ -345,7 +651,15 @@ export class BoilerCard extends LitElement {
         transition: transform 0.2s, box-shadow 0.2s;
       }
 
-      .sensor-row:hover {
+      .sensor-row.compact {
+        padding: 8px 10px;
+      }
+
+      .sensor-row.clickable {
+        cursor: pointer;
+      }
+
+      .sensor-row.clickable:hover {
         transform: translateX(4px);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
@@ -362,6 +676,10 @@ export class BoilerCard extends LitElement {
         font-variant-numeric: tabular-nums;
       }
 
+      .sensor-row.compact .sensor-value {
+        font-size: 16px;
+      }
+
       .average-temp {
         display: flex;
         justify-content: space-between;
@@ -373,8 +691,72 @@ export class BoilerCard extends LitElement {
         margin-top: 8px;
       }
 
+      .average-temp.compact {
+        padding: 12px;
+      }
+
       .sensor-value.average {
         font-size: 24px;
+      }
+
+      .average-temp.compact .sensor-value.average {
+        font-size: 20px;
+      }
+
+      .maintenance-section {
+        margin-top: 16px;
+        padding: 12px;
+        background: var(--secondary-background-color);
+        border-radius: 8px;
+      }
+
+      .maintenance-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        margin-bottom: 12px;
+      }
+
+      .maintenance-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--divider-color);
+      }
+
+      .maintenance-item:last-child {
+        border-bottom: none;
+      }
+
+      .maintenance-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+
+      .maintenance-icon {
+        font-size: 16px;
+      }
+
+      .maintenance-value {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .maintenance-item.ok .maintenance-value {
+        color: var(--success-color, #4caf50);
+      }
+
+      .maintenance-item.warning .maintenance-value {
+        color: var(--warning-color, #ff9800);
+      }
+
+      .maintenance-item.overdue .maintenance-value {
+        color: var(--error-color, #f44336);
+        font-weight: 600;
       }
 
       .no-sensors {
@@ -402,7 +784,7 @@ export class BoilerCard extends LitElement {
   }
 
   public getCardSize(): number {
-    return 5;
+    return this.config.display_mode === 'compact' ? 4 : 5;
   }
 
   static getConfigElement() {
@@ -415,8 +797,12 @@ export class BoilerCard extends LitElement {
       title: 'Bojler',
       show_average: true,
       show_gradient: true,
+      show_stratification: true,
+      display_mode: 'normal',
+      heating_type: 'electric',
       min_temp: 0,
       max_temp: 80,
+      enable_more_info: true,
       sensors: []
     };
   }

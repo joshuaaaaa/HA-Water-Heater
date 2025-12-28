@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2024-12-28
+
+### Added - Quick Wins Features
+- 🌈 **Temperature stratification visualization**: Colored layers showing temperature distribution across sensor positions
+- ⚡ **Heating type icons**: Configurable icons for different heating sources (electric ⚡, solar ☀️, gas 🔥, heat pump 🌡️)
+- ⚠️ **Low temperature warning**: Configurable threshold for temperature alerts
+- 📐 **Display modes**: Switch between normal and compact view
+
+### Added - Must-Have Features
+- 👆 **Click to open more-info**: Click on any sensor to open its more-info dialog
+- ⏱️ **Time estimate to target temperature**: Calculates and displays estimated time to reach target temp during heating
+- 🔧 **Anode maintenance counter**: Tracks days since last anode change with status indicators (OK/Warning/Overdue)
+- 🧹 **Cleaning counter**: Tracks days since last cleaning with status indicators
+
+### Enhanced
+- Improved visual feedback with color-coded maintenance status (green/orange/red)
+- Temperature history tracking for trend calculation (last 30 minutes)
+- Better responsive design for compact mode
+- Enhanced SVG rendering with stratification layers
+
+### Configuration
+- Added `show_stratification` (boolean, default: true)
+- Added `display_mode` ('normal' | 'compact', default: 'normal')
+- Added `heating_type` ('electric' | 'solar' | 'gas' | 'heat_pump', default: 'electric')
+- Added `low_temp_warning` (number, optional)
+- Added `anode_last_change` (ISO date string, optional)
+- Added `anode_change_interval` (number, default: 365 days)
+- Added `cleaning_last_date` (ISO date string, optional)
+- Added `cleaning_interval` (number, default: 180 days)
+- Added `enable_more_info` (boolean, default: true)
+
+### Documentation
+- Updated README with all new features and parameters
+- Added `example-config-advanced.yaml` with 8 real-world examples
+- Comprehensive parameter tables organized by category
+- Examples for all heating types and use cases
+
 ## [1.0.0] - 2024-12-28
 
 ### Added

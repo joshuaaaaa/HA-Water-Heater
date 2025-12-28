@@ -6,12 +6,28 @@ Custom Home Assistant Lovelace card pro zobrazení bojleru/ohřívače vody s te
 
 ## ✨ Funkce
 
+### Vizualizace
 - 🎨 **Vizuální reprezentace bojleru** s vlastním SVG designem
+- 🌈 **Teplotní stratifikace** - barevné vrstvy zobrazující teplotní rozložení
 - 🌡️ **Podpora až 5 teplotních sensorů** (uspořádaných od shora dolů)
 - 📊 **Automatický výpočet průměrné teploty**
 - 🎨 **Barevná gradace** podle teploty (modrá → zelená → žlutá → oranžová → červená)
-- 🔥 **Indikátor ohřívání** s animací
+- 📐 **Režimy zobrazení**: Normální / Kompaktní
+
+### Ohřev a monitoring
+- 🔥 **Indikátor ohřívání** s animací podle typu zdroje
+- ⚡ **Ikony typu ohřevu**: Elektřina, Solár, Plyn, Tepelné čerpadlo
 - 🎯 **Zobrazení cílové teploty**
+- ⏱️ **Odhad času do dosažení cílové teploty** (při aktivním ohřevu)
+- ⚠️ **Upozornění na nízkou teplotu** (konfigurovatelný práh)
+
+### Údržba
+- 🔧 **Kontrola výměny anody** s počítadlem dnů
+- 🧹 **Kontrola čištění** s počítadlem dnů
+- 🟢 **Barevné indikátory stavu** (OK / Varování / Po termínu)
+
+### Interakce
+- 👆 **Kliknutí na senzor** otevře more-info dialog
 - 📱 **Responzivní design** (přizpůsobení mobilním zařízením)
 - ⚡ **Animace a vizuální efekty**
 
@@ -73,48 +89,108 @@ sensors:
     position: 5
 ```
 
-### Pokročilá konfigurace
+### Pokročilá konfigurace se všemi funkcemi
 
 ```yaml
 type: custom:ha-boiler-card
 title: Bojler v koupelně
+
+# Režim zobrazení
+display_mode: normal  # 'normal' nebo 'compact'
+
+# Typ ohřevu (určuje ikonu)
+heating_type: electric  # 'electric', 'solar', 'gas', 'heat_pump'
+
+# Vizualizace
 show_average: true
 show_gradient: true
+show_stratification: true  # Barevné vrstvy teplot
+
+# Rozsah teplot
 min_temp: 0
 max_temp: 80
+
+# Upozornění
+low_temp_warning: 35  # Upozornění když teplota klesne pod 35°C
+
+# Entity
 heating_entity: binary_sensor.boiler_heating
 target_temp_entity: number.boiler_target_temp
+
+# Interakce
+enable_more_info: true  # Kliknutí na senzor otevře more-info
+
+# Údržba - anoda
+anode_last_change: '2024-01-15'  # ISO 8601 formát
+anode_change_interval: 365  # Interval výměny ve dnech
+
+# Údržba - čištění
+cleaning_last_date: '2024-11-01'
+cleaning_interval: 180  # 6 měsíců
+
+# Senzory
 sensors:
   - entity: sensor.boiler_temp_1
-    name: Senzor 1 (Vrchol)
+    name: Vrchol
     position: 1
   - entity: sensor.boiler_temp_2
-    name: Senzor 2
+    name: Horní střed
     position: 2
   - entity: sensor.boiler_temp_3
-    name: Senzor 3 (Střed)
+    name: Střed
     position: 3
   - entity: sensor.boiler_temp_4
-    name: Senzor 4
+    name: Dolní střed
     position: 4
   - entity: sensor.boiler_temp_5
-    name: Senzor 5 (Dno)
+    name: Dno
     position: 5
 ```
 
 ## ⚙️ Konfigurace
 
+### Základní parametry
+
 | Parametr | Typ | Povinný | Výchozí | Popis |
 |----------|-----|---------|---------|-------|
-| `type` | string | Ano | - | `custom:ha-boiler-card` |
+| `type` | string | **Ano** | - | `custom:ha-boiler-card` |
 | `title` | string | Ne | - | Nadpis karty |
 | `sensors` | list | Ne | [] | Seznam teplotních sensorů |
-| `heating_entity` | string | Ne | - | Entita indikující, zda se ohřívá |
-| `target_temp_entity` | string | Ne | - | Entita cílové teploty |
-| `show_average` | boolean | Ne | `true` | Zobrazit průměrnou teplotu |
-| `show_gradient` | boolean | Ne | `true` | Použít barevnou gradaci podle teploty |
-| `min_temp` | number | Ne | `0` | Minimální teplota pro barevnou škálu |
-| `max_temp` | number | Ne | `100` | Maximální teplota pro barevnou škálu |
+
+### Vizualizace
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `display_mode` | string | `normal` | Režim zobrazení: `normal` nebo `compact` |
+| `show_average` | boolean | `true` | Zobrazit průměrnou teplotu |
+| `show_gradient` | boolean | `true` | Barevná gradace podle teploty |
+| `show_stratification` | boolean | `true` | Zobrazit teplotní vrstvy (stratifikaci) |
+| `min_temp` | number | `0` | Minimální teplota pro barevnou škálu |
+| `max_temp` | number | `100` | Maximální teplota pro barevnou škálu |
+
+### Ohřev
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `heating_entity` | string | - | Entita indikující ohřívání |
+| `target_temp_entity` | string | - | Entita cílové teploty (+ odhad času) |
+| `heating_type` | string | `electric` | Typ: `electric` ⚡, `solar` ☀️, `gas` 🔥, `heat_pump` 🌡️ |
+
+### Upozornění a údržba
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `low_temp_warning` | number | - | Práh pro upozornění na nízkou teplotu (°C) |
+| `anode_last_change` | string | - | Datum poslední výměny anody (ISO 8601: 'YYYY-MM-DD') |
+| `anode_change_interval` | number | `365` | Interval výměny anody (dny) |
+| `cleaning_last_date` | string | - | Datum posledního čištění (ISO 8601: 'YYYY-MM-DD') |
+| `cleaning_interval` | number | `180` | Interval čištění (dny) |
+
+### Interakce
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `enable_more_info` | boolean | `true` | Povolit otevření more-info při kliknutí na senzor |
 
 ### Konfigurace sensorů
 
