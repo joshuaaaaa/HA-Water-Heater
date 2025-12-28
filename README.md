@@ -19,28 +19,40 @@ Custom Home Assistant Lovelace card pro zobrazení bojleru/ohřívače vody s te
 
 ### HACS (doporučeno)
 
-1. Přejděte do HACS → Frontend
-2. Klikněte na "..." v pravém horním rohu
-3. Vyberte "Custom repositories"
-4. Přidejte URL tohoto repository
-5. Kategorie: "Lovelace"
-6. Klikněte na "Add"
-7. Najděte "HA Boiler Card" a klikněte na "Install"
+#### Přidání jako Custom Repository:
+
+1. Otevřete HACS v Home Assistant
+2. Klikněte na tři tečky **⋮** v pravém horním rohu
+3. Vyberte **"Custom repositories"**
+4. Do pole **"Repository"** vložte URL tohoto repository:
+   ```
+   https://github.com/your-username/ha-boiler-card
+   ```
+5. V poli **"Category"** vyberte **"Lovelace"**
+6. Klikněte na **"ADD"**
+7. Zavřete dialog a najděte "HA Boiler Card" v seznamu
+8. Klikněte na kartu a pak na **"DOWNLOAD"**
+9. Restartujte Home Assistant nebo obnovte stránku (Ctrl+F5)
 
 ### Manuální instalace
 
-1. Stáhněte `ha-boiler-card.js` z nejnovějšího release
-2. Zkopírujte soubor do složky `config/www/`
-3. Přidejte následující do `configuration.yaml`:
+1. Stáhněte `ha-boiler-card.js` z [nejnovějšího release](https://github.com/your-username/ha-boiler-card/releases/latest)
+2. Zkopírujte soubor do složky `config/www/` na vašem Home Assistant serveru
+3. Přidejte resource v Nastavení:
+   - Přejděte na **Nastavení** → **Dashboards** → **⋮** (tři tečky) → **Resources**
+   - Klikněte na **"+ ADD RESOURCE"**
+   - URL: `/local/ha-boiler-card.js`
+   - Resource type: **JavaScript Module**
 
-```yaml
-lovelace:
-  resources:
-    - url: /local/ha-boiler-card.js
-      type: module
-```
+   Nebo přidejte do `configuration.yaml`:
+   ```yaml
+   lovelace:
+     resources:
+       - url: /local/ha-boiler-card.js
+         type: module
+   ```
 
-4. Restartujte Home Assistant
+4. Restartujte Home Assistant nebo obnovte cache prohlížeče (Ctrl+F5)
 
 ## 🚀 Použití
 
