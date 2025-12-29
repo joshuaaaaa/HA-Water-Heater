@@ -1,6 +1,6 @@
 # HA Boiler Card 🌡️
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/joshuaaaaa/HA-Water-Heater/releases)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/joshuaaaaa/HA-Water-Heater/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
@@ -53,6 +53,7 @@ Custom Home Assistant Lovelace card pro zobrazení bojleru/ohřívače vody s te
 
 ### 👆 Interakce
 - **Kliknutí na senzor** otevře more-info dialog
+- **Ovládací tlačítko** - zapnutí/vypnutí bojleru (v1.4.0)
 - **Responzivní design** pro všechny velikosti obrazovky
 - **Animace a vizuální efekty**
 
@@ -188,6 +189,20 @@ sensors:
 
 ---
 
+## 🎮 Ovládací tlačítko
+
+```yaml
+type: custom:ha-boiler-card
+title: Bojler s ovládáním
+show_control_button: true
+control_entity: switch.boiler_power  # switch, input_boolean, etc.
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+```
+
+---
+
 ## 🌍 Lokalizace
 
 ```yaml
@@ -315,6 +330,9 @@ Detailní návod: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 ---
 
 ## 📝 Co je nového
+
+### v1.4.0 (2024-12-29)
+- ✨ Ovládací tlačítko pro zapnutí/vypnutí bojleru
 
 ### v1.3.0 (2024-12-29)
 - ✨ Vlastní barvy a 5 témat

@@ -40,6 +40,9 @@ interface BoilerCardConfig extends LovelaceCardConfig {
   // Localization
   language?: 'cs' | 'en' | 'de' | 'sk' | 'pl';
   custom_labels?: CustomLabels;
+  // Control button
+  control_entity?: string;
+  show_control_button?: boolean;
 }
 
 interface SensorConfig {
@@ -161,6 +164,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     legionella_risk: 'Riziko legionely - ohřejte na 60°C',
     unusual_consumption: 'Neobvyklá spotřeba energie',
     maintenance_due: 'Údržba je potřeba',
+    turn_on: 'Zapnout',
+    turn_off: 'Vypnout',
+    control: 'Ovládání',
   },
   en: {
     average_temp: 'Average Temperature',
@@ -177,6 +183,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     legionella_risk: 'Legionella risk - heat to 60°C',
     unusual_consumption: 'Unusual energy consumption',
     maintenance_due: 'Maintenance required',
+    turn_on: 'Turn On',
+    turn_off: 'Turn Off',
+    control: 'Control',
   },
   de: {
     average_temp: 'Durchschnittstemperatur',
@@ -193,6 +202,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     legionella_risk: 'Legionellen-Risiko - auf 60°C erhitzen',
     unusual_consumption: 'Ungewöhnlicher Energieverbrauch',
     maintenance_due: 'Wartung erforderlich',
+    turn_on: 'Einschalten',
+    turn_off: 'Ausschalten',
+    control: 'Steuerung',
   },
   sk: {
     average_temp: 'Priemerná teplota',
@@ -209,6 +221,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     legionella_risk: 'Riziko legionely - ohrejte na 60°C',
     unusual_consumption: 'Neobvyklá spotreba energie',
     maintenance_due: 'Údržba je potrebná',
+    turn_on: 'Zapnúť',
+    turn_off: 'Vypnúť',
+    control: 'Ovládanie',
   },
   pl: {
     average_temp: 'Średnia temperatura',
@@ -225,6 +240,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     legionella_risk: 'Ryzyko legionelli - podgrzej do 60°C',
     unusual_consumption: 'Niezwykłe zużycie energii',
     maintenance_due: 'Wymagana konserwacja',
+    turn_on: 'Włącz',
+    turn_off: 'Wyłącz',
+    control: 'Sterowanie',
   },
 };
 
@@ -466,6 +484,29 @@ export class BoilerCard extends LitElement {
       message: message,
       title: 'HA Boiler Card',
     });
+  }
+
+  // Toggle control entity (switch/input_boolean)
+  private toggleControlEntity(): void {
+    if (!this.config.control_entity || !this.hass?.states) return;
+
+    const state = this.hass.states[this.config.control_entity];
+    if (!state) return;
+
+    const domain = this.config.control_entity.split('.')[0];
+    const isOn = state.state === 'on';
+    const service = isOn ? 'turn_off' : 'turn_on';
+
+    this.hass.callService(domain, service, {
+      entity_id: this.config.control_entity,
+    });
+  }
+
+  // Get control entity state
+  private getControlState(): boolean {
+    if (!this.config.control_entity || !this.hass?.states) return false;
+    const state = this.hass.states[this.config.control_entity];
+    return state?.state === 'on';
   }
 
   private getTemperatureColor(temp: number | null): string {
@@ -899,6 +940,31 @@ export class BoilerCard extends LitElement {
     `;
   }
 
+  private renderControlButton(): TemplateResult {
+    if (!this.config.show_control_button || !this.config.control_entity) {
+      return html``;
+    }
+
+    const isOn = this.getControlState();
+    const state = this.hass?.states?.[this.config.control_entity];
+    const entityExists = !!state;
+
+    if (!entityExists) return html``;
+
+    return html`
+      <div class="control-section">
+        <button
+          class="control-button ${isOn ? 'on' : 'off'}"
+          @click=${() => this.toggleControlEntity()}
+          title="${this.t('control')}"
+        >
+          <span class="control-icon">${isOn ? '🔴' : '⚪'}</span>
+          <span class="control-label">${isOn ? this.t('turn_off') : this.t('turn_on')}</span>
+        </button>
+      </div>
+    `;
+  }
+
   protected render(): TemplateResult {
     if (!this.config || !this.hass) {
       return html``;
@@ -923,6 +989,8 @@ export class BoilerCard extends LitElement {
           ${this.config.title ? html`<h2 class="card-title">${this.config.title}</h2>` : ''}
 
           ${this.renderAlerts()}
+
+          ${this.renderControlButton()}
 
           <div class="boiler-container ${isCompact ? 'compact' : ''}">
             <div class="boiler-visual">
@@ -1008,6 +1076,53 @@ export class BoilerCard extends LitElement {
 
       .warning-icon {
         font-size: 20px;
+      }
+
+      .control-section {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .control-button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 24px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .control-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .control-button:active {
+        transform: translateY(0);
+      }
+
+      .control-button.on {
+        background: linear-gradient(135deg, #f44336 0%, #e53935 100%);
+        color: white;
+      }
+
+      .control-button.off {
+        background: linear-gradient(135deg, #78909c 0%, #607d8b 100%);
+        color: white;
+      }
+
+      .control-icon {
+        font-size: 20px;
+      }
+
+      .control-label {
+        user-select: none;
       }
 
       .boiler-container {

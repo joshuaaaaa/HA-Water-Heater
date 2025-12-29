@@ -744,3 +744,33 @@ sensors:
   - entity: sensor.boiler_temp_5
     name: Dno
     position: 5
+
+---
+
+# ================================================
+# Příklad 21: Ovládací tlačítko bojleru (v1.4.0)
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler s ovládáním
+display_mode: normal
+show_average: true
+show_gradient: true
+show_stratification: true
+# NOVÉ v1.4.0: Tlačítko pro zapnutí/vypnutí bojleru
+show_control_button: true
+control_entity: switch.boiler_power  # Entita pro ovládání (switch, input_boolean, etc.)
+# Základní konfigurace
+heating_entity: binary_sensor.boiler_heating
+target_temp_entity: input_number.boiler_target_temp
+min_temp: 0
+max_temp: 80
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Horní
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střední
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dolní
+    position: 5
