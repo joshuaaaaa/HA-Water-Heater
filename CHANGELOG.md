@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2024-12-29
+
+### Added
+- **Custom Colors**: Full color customization support
+  - Configure `boiler_fill`, `boiler_stroke`, `cold_water`, `warm_water`, `hot_water`
+  - Set custom `gradient_start` and `gradient_end` colors
+  - Colors apply to boiler visualization, temperature indicators, and gradients
+- **Preset Themes**: 5 beautiful color themes ready to use
+  - `ocean`: Blue tones for a fresh, aquatic look
+  - `sunset`: Warm orange-red gradient
+  - `forest`: Green natural tones
+  - `fire`: Red-orange hot colors
+  - `ice`: Light blue cool colors
+  - Simply set `theme: 'ocean'` (or other theme name)
+- **Advanced Alerts**: Smart monitoring with 3 alert types
+  - `temperature_drop`: Detects rapid temperature drops (configurable threshold)
+  - `legionella_risk`: Warns when water temperature is too low for too long
+  - `unusual_consumption`: Alerts on high power consumption
+  - Each alert can be enabled/disabled and customized
+- **Notifications**: Integration with Home Assistant notification system
+  - Configure notification service (e.g., `notify.mobile_app`)
+  - Choose which events trigger notifications
+  - Supported events: `maintenance_due`, `low_temperature`, `high_consumption`, `legionella_risk`
+- **Localization**: Multi-language support
+  - Supported languages: Czech (cs), English (en), German (de), Slovak (sk), Polish (pl)
+  - Set language with `language: 'en'`
+  - Override any label with `custom_labels`
+  - All UI text is now translatable
+
+### Changed
+- Temperature color system now uses custom colors when configured
+- Alert banners now show appropriate icons (🦠 for legionella, ❄️ for temperature drop, ⚡ for consumption)
+- Boiler SVG now renders with custom theme colors
+- All hardcoded Czech strings replaced with translation system
+
 ## [1.2.2] - 2024-12-29
 
 ### Fixed

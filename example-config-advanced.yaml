@@ -458,3 +458,289 @@ sensors:
   - entity: sensor.boiler_temp_5
     name: Dno
     position: 5
+
+---
+
+# ================================================
+# NOVÉ FUNKCE V1.3.0
+# ================================================
+
+# ================================================
+# Příklad 14: Vlastní barvy
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler s vlastními barvami
+display_mode: normal
+# NOVÉ v1.3.0: Vlastní barvy
+colors:
+  boiler_fill: '#9C27B0'        # Fialová náplň
+  boiler_stroke: '#4A148C'      # Tmavě fialový okraj
+  cold_water: '#E1BEE7'         # Světle fialová (studená)
+  warm_water: '#BA68C8'         # Střední fialová (teplá)
+  hot_water: '#7B1FA2'          # Tmavě fialová (horká)
+  gradient_start: '#F3E5F5'     # Světlá fialová začátek
+  gradient_end: '#4A148C'       # Tmavá fialová konec
+show_average: true
+show_gradient: true
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    position: 5
+
+---
+
+# ================================================
+# Příklad 15: Přednastavená témata
+# ================================================
+
+# Téma Ocean (modré tóny)
+type: custom:ha-boiler-card
+title: Bojler - Ocean
+theme: ocean  # NOVÉ v1.3.0: Přednastavené téma
+show_average: true
+show_gradient: true
+sensors:
+  - entity: sensor.boiler_temp_1
+    position: 1
+  - entity: sensor.boiler_temp_3
+    position: 3
+
+---
+
+# Téma Sunset (oranžovo-červené)
+type: custom:ha-boiler-card
+title: Bojler - Sunset
+theme: sunset
+show_average: true
+show_gradient: true
+sensors:
+  - entity: sensor.boiler_temp_1
+    position: 1
+  - entity: sensor.boiler_temp_3
+    position: 3
+
+---
+
+# Téma Forest (zelené tóny)
+type: custom:ha-boiler-card
+title: Bojler - Forest
+theme: forest
+show_average: true
+show_gradient: true
+sensors:
+  - entity: sensor.boiler_temp_1
+    position: 1
+  - entity: sensor.boiler_temp_3
+    position: 3
+
+---
+
+# ================================================
+# Příklad 16: Pokročilá upozornění
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler s upozorněními
+display_mode: normal
+show_average: true
+show_gradient: true
+# NOVÉ v1.3.0: Pokročilá upozornění
+alerts:
+  - type: temperature_drop
+    threshold: 15  # Upozornění při poklesu o 15°C za hodinu
+    enabled: true
+    message: 'Výrazný pokles teploty - možná porucha!'
+  - type: legionella_risk
+    min_temp: 60  # Minimální teplota pro prevenci legionely
+    duration: 168  # 7 dní v hodinách (7*24)
+    enabled: true
+    message: 'Riziko legionely - ohřejte bojler na 60°C!'
+  - type: unusual_consumption
+    threshold: 3000  # Watty
+    enabled: true
+    message: 'Neobvykle vysoká spotřeba energie!'
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    position: 5
+
+---
+
+# ================================================
+# Příklad 17: Notifikace
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler s notifikacemi
+display_mode: normal
+show_average: true
+# NOVÉ v1.3.0: Notifikace do Home Assistant
+notifications:
+  enabled: true
+  service: notify.mobile_app  # Nebo notify.persistent_notification
+  events:
+    - maintenance_due      # Upozornění na údržbu
+    - low_temperature      # Nízká teplota
+    - legionella_risk      # Riziko legionely
+    - high_consumption     # Vysoká spotřeba
+# Upozornění pro aktivaci notifikací
+alerts:
+  - type: legionella_risk
+    min_temp: 60
+    duration: 168
+    enabled: true
+# Údržba pro aktivaci notifikací
+anode_last_change: '2024-01-01'
+anode_change_interval: 365
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+  - entity: sensor.boiler_temp_bottom
+    position: 5
+
+---
+
+# ================================================
+# Příklad 18: Lokalizace (English)
+# ================================================
+type: custom:ha-boiler-card
+title: Water Heater
+display_mode: normal
+# NOVÉ v1.3.0: Jazykové nastavení
+language: en  # cs, en, de, sk, pl
+show_average: true
+show_gradient: true
+heating_entity: binary_sensor.boiler_heating
+target_temp_entity: input_number.boiler_target
+anode_last_change: '2024-06-01'
+cleaning_last_date: '2024-08-15'
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Top
+    position: 1
+  - entity: sensor.boiler_temp_bottom
+    name: Bottom
+    position: 5
+
+---
+
+# ================================================
+# Příklad 19: Vlastní popisky
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler
+display_mode: normal
+language: cs
+# NOVÉ v1.3.0: Přepsání výchozích popisků
+custom_labels:
+  average_temp: 'Střední teplota'
+  heating: 'Ohřívá se'
+  target: 'Cílová hodnota'
+  anode_check: 'Anoda - kontrola'
+  cleaning_check: 'Vyčištění bojleru'
+  days_remaining: 'dní do konce'
+  overdue: 'nutná výměna'
+show_average: true
+anode_last_change: '2024-01-01'
+cleaning_last_date: '2024-06-01'
+sensors:
+  - entity: sensor.boiler_temp_1
+    position: 1
+  - entity: sensor.boiler_temp_3
+    position: 3
+
+---
+
+# ================================================
+# Příklad 20: Kompletní konfigurace v1.3.0 (VŠE DOHROMADY)
+# ================================================
+type: custom:ha-boiler-card
+title: Kompletní bojler v1.3.0
+display_mode: normal
+
+# Téma a barvy
+theme: ocean  # nebo použijte colors pro vlastní barvy
+
+# Lokalizace
+language: cs
+custom_labels:
+  average_temp: 'Průměrná teplota vody'
+
+# Základní zobrazení
+show_average: true
+show_gradient: true
+show_stratification: true
+show_sparkline: true
+advanced_animations: true
+min_temp: 0
+max_temp: 80
+
+# Upozornění
+low_temp_warning: 40
+alerts:
+  - type: temperature_drop
+    threshold: 15
+    enabled: true
+  - type: legionella_risk
+    min_temp: 60
+    duration: 168
+    enabled: true
+  - type: unusual_consumption
+    threshold: 3000
+    enabled: true
+
+# Notifikace
+notifications:
+  enabled: true
+  service: notify.mobile_app
+  events:
+    - maintenance_due
+    - low_temperature
+    - legionella_risk
+
+# Ohřev - hybridní systém
+heating_sources:
+  - entity: binary_sensor.solar_active
+    type: solar
+    name: Solární kolektor
+    priority: 1
+  - entity: binary_sensor.electric_heater
+    type: electric
+    name: Elektrické dohřívání
+    priority: 2
+target_temp_entity: input_number.boiler_target
+
+# Spotřeba energie
+power_entity: sensor.boiler_power
+energy_cost: 4.5
+
+# Údržba
+anode_last_change: '2024-01-15'
+anode_change_interval: 365
+cleaning_last_date: '2024-06-01'
+cleaning_interval: 180
+
+# Interakce
+enable_more_info: true
+
+# Senzory
+sensors:
+  - entity: sensor.boiler_temp_1
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_2
+    name: Horní střed
+    position: 2
+  - entity: sensor.boiler_temp_3
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_4
+    name: Dolní střed
+    position: 4
+  - entity: sensor.boiler_temp_5
+    name: Dno
+    position: 5

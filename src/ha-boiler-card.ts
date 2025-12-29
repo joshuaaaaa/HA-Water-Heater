@@ -29,6 +29,17 @@ interface BoilerCardConfig extends LovelaceCardConfig {
   heating_sources?: HeatingSource[];
   // Advanced animations
   advanced_animations?: boolean;
+  // Custom colors
+  colors?: ColorConfig;
+  // Theme
+  theme?: 'ocean' | 'sunset' | 'forest' | 'fire' | 'ice' | 'custom';
+  // Alerts
+  alerts?: AlertConfig[];
+  // Notifications
+  notifications?: NotificationConfig;
+  // Localization
+  language?: 'cs' | 'en' | 'de' | 'sk' | 'pl';
+  custom_labels?: CustomLabels;
 }
 
 interface SensorConfig {
@@ -48,6 +59,174 @@ interface TempHistory {
   value: number;
   timestamp: number;
 }
+
+interface ColorConfig {
+  boiler_fill?: string;
+  boiler_stroke?: string;
+  cold_water?: string;
+  warm_water?: string;
+  hot_water?: string;
+  gradient_start?: string;
+  gradient_end?: string;
+}
+
+interface AlertConfig {
+  type: 'temperature_drop' | 'legionella_risk' | 'unusual_consumption';
+  threshold?: number;
+  min_temp?: number;
+  duration?: number;
+  message?: string;
+  enabled?: boolean;
+}
+
+interface NotificationConfig {
+  service?: string;
+  events?: ('maintenance_due' | 'low_temperature' | 'high_consumption' | 'legionella_risk')[];
+  enabled?: boolean;
+}
+
+interface CustomLabels {
+  average_temp?: string;
+  heating?: string;
+  target?: string;
+  anode_check?: string;
+  cleaning_check?: string;
+  days_remaining?: string;
+  overdue?: string;
+}
+
+// Theme color presets
+const THEMES: Record<string, ColorConfig> = {
+  ocean: {
+    boiler_fill: '#4DD0E1',
+    boiler_stroke: '#0097A7',
+    cold_water: '#B3E5FC',
+    warm_water: '#4FC3F7',
+    hot_water: '#0288D1',
+    gradient_start: '#E1F5FE',
+    gradient_end: '#01579B',
+  },
+  sunset: {
+    boiler_fill: '#FF9800',
+    boiler_stroke: '#E65100',
+    cold_water: '#FFE0B2',
+    warm_water: '#FFB74D',
+    hot_water: '#E64A19',
+    gradient_start: '#FFF3E0',
+    gradient_end: '#BF360C',
+  },
+  forest: {
+    boiler_fill: '#66BB6A',
+    boiler_stroke: '#2E7D32',
+    cold_water: '#C8E6C9',
+    warm_water: '#81C784',
+    hot_water: '#43A047',
+    gradient_start: '#E8F5E9',
+    gradient_end: '#1B5E20',
+  },
+  fire: {
+    boiler_fill: '#FF5722',
+    boiler_stroke: '#BF360C',
+    cold_water: '#FFCCBC',
+    warm_water: '#FF7043',
+    hot_water: '#D84315',
+    gradient_start: '#FBE9E7',
+    gradient_end: '#4E342E',
+  },
+  ice: {
+    boiler_fill: '#81D4FA',
+    boiler_stroke: '#0277BD',
+    cold_water: '#E1F5FE',
+    warm_water: '#4FC3F7',
+    hot_water: '#0288D1',
+    gradient_start: '#F1F8FB',
+    gradient_end: '#01579B',
+  },
+};
+
+// Localization strings
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  cs: {
+    average_temp: 'Průměrná teplota',
+    heating: 'Topí se',
+    target: 'Cílová teplota',
+    anode_check: 'Kontrola anody',
+    cleaning_check: 'Čištění',
+    days_remaining: 'zbývá dní',
+    overdue: 'po termínu',
+    power_consumption: 'Spotřeba',
+    heating_source: 'Zdroj ohřevu',
+    low_temperature: 'Nízká teplota!',
+    temperature_drop: 'Prudký pokles teploty!',
+    legionella_risk: 'Riziko legionely - ohřejte na 60°C',
+    unusual_consumption: 'Neobvyklá spotřeba energie',
+    maintenance_due: 'Údržba je potřeba',
+  },
+  en: {
+    average_temp: 'Average Temperature',
+    heating: 'Heating',
+    target: 'Target Temperature',
+    anode_check: 'Anode Check',
+    cleaning_check: 'Cleaning',
+    days_remaining: 'days remaining',
+    overdue: 'overdue',
+    power_consumption: 'Consumption',
+    heating_source: 'Heating Source',
+    low_temperature: 'Low temperature!',
+    temperature_drop: 'Rapid temperature drop!',
+    legionella_risk: 'Legionella risk - heat to 60°C',
+    unusual_consumption: 'Unusual energy consumption',
+    maintenance_due: 'Maintenance required',
+  },
+  de: {
+    average_temp: 'Durchschnittstemperatur',
+    heating: 'Heizung',
+    target: 'Zieltemperatur',
+    anode_check: 'Anode Prüfung',
+    cleaning_check: 'Reinigung',
+    days_remaining: 'Tage übrig',
+    overdue: 'überfällig',
+    power_consumption: 'Verbrauch',
+    heating_source: 'Heizquelle',
+    low_temperature: 'Niedrige Temperatur!',
+    temperature_drop: 'Schneller Temperaturabfall!',
+    legionella_risk: 'Legionellen-Risiko - auf 60°C erhitzen',
+    unusual_consumption: 'Ungewöhnlicher Energieverbrauch',
+    maintenance_due: 'Wartung erforderlich',
+  },
+  sk: {
+    average_temp: 'Priemerná teplota',
+    heating: 'Kúrenie',
+    target: 'Cieľová teplota',
+    anode_check: 'Kontrola anódy',
+    cleaning_check: 'Čistenie',
+    days_remaining: 'zostáva dní',
+    overdue: 'po termíne',
+    power_consumption: 'Spotreba',
+    heating_source: 'Zdroj kúrenia',
+    low_temperature: 'Nízka teplota!',
+    temperature_drop: 'Prudký pokles teploty!',
+    legionella_risk: 'Riziko legionely - ohrejte na 60°C',
+    unusual_consumption: 'Neobvyklá spotreba energie',
+    maintenance_due: 'Údržba je potrebná',
+  },
+  pl: {
+    average_temp: 'Średnia temperatura',
+    heating: 'Ogrzewanie',
+    target: 'Temperatura docelowa',
+    anode_check: 'Sprawdzenie anody',
+    cleaning_check: 'Czyszczenie',
+    days_remaining: 'dni pozostało',
+    overdue: 'po terminie',
+    power_consumption: 'Zużycie',
+    heating_source: 'Źródło ogrzewania',
+    low_temperature: 'Niska temperatura!',
+    temperature_drop: 'Szybki spadek temperatury!',
+    legionella_risk: 'Ryzyko legionelli - podgrzej do 60°C',
+    unusual_consumption: 'Niezwykłe zużycie energii',
+    maintenance_due: 'Wymagana konserwacja',
+  },
+};
 
 @customElement('ha-boiler-card')
 export class BoilerCard extends LitElement {
@@ -180,23 +359,133 @@ export class BoilerCard extends LitElement {
     return { power, cost: costPerHour };
   }
 
+  // Get active colors from theme or custom config
+  private getColors(): ColorConfig {
+    const defaultColors: ColorConfig = {
+      boiler_fill: '#4CAF50',
+      boiler_stroke: '#388E3C',
+      cold_water: '#2196F3',
+      warm_water: '#FF9800',
+      hot_water: '#F44336',
+      gradient_start: '#2196F3',
+      gradient_end: '#F44336',
+    };
+
+    if (this.config.theme && this.config.theme !== 'custom' && THEMES[this.config.theme]) {
+      return { ...defaultColors, ...THEMES[this.config.theme] };
+    }
+
+    if (this.config.colors) {
+      return { ...defaultColors, ...this.config.colors };
+    }
+
+    return defaultColors;
+  }
+
+  // Get translated string
+  private t(key: string): string {
+    const language = this.config.language || 'cs';
+    const translations = TRANSLATIONS[language] || TRANSLATIONS.cs;
+
+    // Check custom labels first
+    if (this.config.custom_labels && this.config.custom_labels[key as keyof CustomLabels]) {
+      return this.config.custom_labels[key as keyof CustomLabels]!;
+    }
+
+    return translations[key] || key;
+  }
+
+  // Check alerts and return active ones
+  private checkAlerts(): AlertConfig[] {
+    if (!this.config.alerts) return [];
+
+    const activeAlerts: AlertConfig[] = [];
+    const avgTemp = this.getAverageTemperature();
+
+    this.config.alerts.forEach(alert => {
+      if (alert.enabled === false) return;
+
+      switch (alert.type) {
+        case 'temperature_drop': {
+          // Check temperature drop over time
+          const history = this.tempHistory.get('average');
+          if (history && history.length >= 2 && avgTemp !== null) {
+            const oneHourAgo = Date.now() - 60 * 60 * 1000;
+            const oldReading = history.find(h => h.timestamp < oneHourAgo);
+            if (oldReading && (oldReading.value - avgTemp) > (alert.threshold || 10)) {
+              activeAlerts.push(alert);
+            }
+          }
+          break;
+        }
+
+        case 'legionella_risk': {
+          // Check if temperature has been below threshold for too long
+          const history = this.tempHistory.get('average');
+          const minTemp = alert.min_temp || 60;
+          const duration = (alert.duration || 168) * 60 * 60 * 1000; // Convert days to ms
+
+          if (history && history.length > 0) {
+            const cutoffTime = Date.now() - duration;
+            const hasBeenHot = history.some(h => h.timestamp > cutoffTime && h.value >= minTemp);
+            if (!hasBeenHot && avgTemp !== null && avgTemp < minTemp) {
+              activeAlerts.push(alert);
+            }
+          }
+          break;
+        }
+
+        case 'unusual_consumption': {
+          // Check for unusual power consumption
+          const consumption = this.getPowerConsumption();
+          if (consumption && alert.threshold) {
+            // Simple check - could be enhanced with historical average
+            const threshold = alert.threshold;
+            if (consumption.power > threshold) {
+              activeAlerts.push(alert);
+            }
+          }
+          break;
+        }
+      }
+    });
+
+    return activeAlerts;
+  }
+
+  // Send notification to Home Assistant
+  private sendNotification(event: string, message: string): void {
+    if (!this.config.notifications?.enabled) return;
+    if (!this.config.notifications.events?.includes(event as any)) return;
+    if (!this.hass) return;
+
+    const service = this.config.notifications.service || 'persistent_notification.create';
+    const [domain, serviceAction] = service.split('.');
+
+    this.hass.callService(domain, serviceAction, {
+      message: message,
+      title: 'HA Boiler Card',
+    });
+  }
+
   private getTemperatureColor(temp: number | null): string {
     if (temp === null) return '#888';
 
+    const colors = this.getColors();
     const min = this.config.min_temp || 0;
     const max = this.config.max_temp || 100;
     const ratio = Math.max(0, Math.min(1, (temp - min) / (max - min)));
 
-    if (ratio < 0.25) {
-      const r = Math.floor(ratio * 4 * 255);
-      return `rgb(${r}, ${Math.floor(100 + ratio * 4 * 155)}, 255)`;
-    } else if (ratio < 0.5) {
-      const r = Math.floor((ratio - 0.25) * 4 * 255);
-      return `rgb(${r}, 255, ${Math.floor(255 - (ratio - 0.25) * 4 * 255)})`;
-    } else if (ratio < 0.75) {
-      return `rgb(255, ${Math.floor(255 - (ratio - 0.5) * 4 * 128)}, 0)`;
+    // Use custom colors based on temperature ranges
+    if (ratio < 0.3) {
+      // Cold water
+      return colors.cold_water || '#2196F3';
+    } else if (ratio < 0.6) {
+      // Warm water
+      return colors.warm_water || '#FF9800';
     } else {
-      return `rgb(255, ${Math.floor(127 - (ratio - 0.75) * 4 * 127)}, 0)`;
+      // Hot water
+      return colors.hot_water || '#F44336';
     }
   }
 
@@ -371,18 +660,21 @@ export class BoilerCard extends LitElement {
     const isHeating = this.isHeating();
     const activeSources = this.getActiveHeatingSources();
     const avgTemp = this.getAverageTemperature();
+    const colors = this.getColors();
+
     const fillColor = this.config.show_gradient && avgTemp !== null
       ? this.getTemperatureColor(avgTemp)
-      : '#4A90E2';
+      : colors.boiler_fill || '#4A90E2';
 
+    const strokeColor = colors.boiler_stroke || '#333';
     const isCompact = this.config.display_mode === 'compact';
 
     return html`
       <svg class="boiler-svg ${isCompact ? 'compact' : ''}" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="boilerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:${fillColor};stop-opacity:0.3" />
-            <stop offset="100%" style="stop-color:${fillColor};stop-opacity:0.9" />
+            <stop offset="0%" style="stop-color:${colors.gradient_start || fillColor};stop-opacity:0.3" />
+            <stop offset="100%" style="stop-color:${colors.gradient_end || fillColor};stop-opacity:0.9" />
           </linearGradient>
 
           <filter id="glow">
@@ -400,20 +692,20 @@ export class BoilerCard extends LitElement {
         <!-- Tank body -->
         <rect x="50" y="50" width="100" height="200" rx="10" ry="10"
               fill="${this.config.show_stratification ? 'none' : 'url(#boilerGradient)'}"
-              stroke="#333"
+              stroke="${strokeColor}"
               stroke-width="2"/>
 
         <!-- Top cap -->
         <ellipse cx="100" cy="50" rx="50" ry="15"
                  fill="${fillColor}"
-                 stroke="#333"
+                 stroke="${strokeColor}"
                  stroke-width="2"
                  opacity="0.8"/>
 
         <!-- Bottom cap -->
         <ellipse cx="100" cy="250" rx="50" ry="15"
                  fill="${fillColor}"
-                 stroke="#333"
+                 stroke="${strokeColor}"
                  stroke-width="2"
                  opacity="0.6"/>
 
@@ -575,6 +867,38 @@ export class BoilerCard extends LitElement {
     `;
   }
 
+  private renderAlerts(): TemplateResult {
+    const alerts = this.checkAlerts();
+    const avgTemp = this.getAverageTemperature();
+    const hasLowTempWarning = this.hasLowTempWarning();
+
+    if (alerts.length === 0 && !hasLowTempWarning) return html``;
+
+    return html`
+      ${hasLowTempWarning ? html`
+        <div class="warning-banner">
+          <span class="warning-icon">⚠️</span>
+          <span>${this.t('low_temperature')} (${avgTemp?.toFixed(1)}°C)</span>
+        </div>
+      ` : ''}
+
+      ${alerts.map(alert => {
+        // Send notification for this alert
+        this.sendNotification(alert.type, alert.message || this.t(alert.type));
+
+        return html`
+          <div class="warning-banner alert-${alert.type}">
+            <span class="warning-icon">
+              ${alert.type === 'legionella_risk' ? '🦠' :
+                alert.type === 'temperature_drop' ? '❄️' : '⚡'}
+            </span>
+            <span>${alert.message || this.t(alert.type)}</span>
+          </div>
+        `;
+      })}
+    `;
+  }
+
   protected render(): TemplateResult {
     if (!this.config || !this.hass) {
       return html``;
@@ -585,7 +909,6 @@ export class BoilerCard extends LitElement {
       ? this.getSensorValue(this.config.target_temp_entity)
       : null;
     const timeToTarget = this.calculateTimeToTarget();
-    const hasLowTempWarning = this.hasLowTempWarning();
     const isCompact = this.config.display_mode === 'compact';
 
     const sortedSensors = [...(this.config.sensors || [])].sort((a, b) => {
@@ -599,12 +922,7 @@ export class BoilerCard extends LitElement {
         <div class="card-content ${isCompact ? 'compact' : ''}">
           ${this.config.title ? html`<h2 class="card-title">${this.config.title}</h2>` : ''}
 
-          ${hasLowTempWarning ? html`
-            <div class="warning-banner">
-              <span class="warning-icon">⚠️</span>
-              <span>Nízká teplota! (${avgTemp?.toFixed(1)}°C)</span>
-            </div>
-          ` : ''}
+          ${this.renderAlerts()}
 
           <div class="boiler-container ${isCompact ? 'compact' : ''}">
             <div class="boiler-visual">
