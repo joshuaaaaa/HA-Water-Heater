@@ -582,6 +582,7 @@ show_average: true
 notifications:
   enabled: true
   service: notify.mobile_app  # Nebo notify.persistent_notification
+  interval: 30  # NOVÉ v1.4.1: Interval mezi notifikacemi v minutách (výchozí 30)
   events:
     - maintenance_due      # Upozornění na údržbu
     - low_temperature      # Nízká teplota
@@ -697,6 +698,7 @@ alerts:
 notifications:
   enabled: true
   service: notify.mobile_app
+  interval: 60  # Interval mezi notifikacemi (60 minut)
   events:
     - maintenance_due
     - low_temperature

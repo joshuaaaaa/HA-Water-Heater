@@ -86,6 +86,7 @@ interface NotificationConfig {
   service?: string;
   events?: ('maintenance_due' | 'low_temperature' | 'high_consumption' | 'legionella_risk')[];
   enabled?: boolean;
+  interval?: number; // Minutes between notifications (default 30)
 }
 
 interface CustomLabels {
@@ -251,6 +252,7 @@ export class BoilerCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private config!: BoilerCardConfig;
   @state() private tempHistory: Map<string, TempHistory[]> = new Map();
+  @state() private lastNotificationTime: Map<string, number> = new Map();
 
   public setConfig(config: BoilerCardConfig): void {
     if (!config) {
@@ -476,6 +478,20 @@ export class BoilerCard extends LitElement {
     if (!this.config.notifications?.enabled) return;
     if (!this.config.notifications.events?.includes(event as any)) return;
     if (!this.hass) return;
+
+    // Check throttling - default 30 minutes between notifications
+    const intervalMinutes = this.config.notifications.interval || 30;
+    const intervalMs = intervalMinutes * 60 * 1000;
+    const now = Date.now();
+    const lastTime = this.lastNotificationTime.get(event);
+
+    if (lastTime && (now - lastTime) < intervalMs) {
+      // Skip notification - too soon since last one
+      return;
+    }
+
+    // Update last notification time
+    this.lastNotificationTime.set(event, now);
 
     const service = this.config.notifications.service || 'persistent_notification.create';
     const [domain, serviceAction] = service.split('.');
@@ -873,6 +889,14 @@ export class BoilerCard extends LitElement {
     const anodeStatus = this.getMaintenanceStatus(anodeDays, this.config.anode_change_interval || 365);
     const cleaningStatus = this.getMaintenanceStatus(cleaningDays, this.config.cleaning_interval || 180);
 
+    // Send maintenance notifications if due
+    if (anodeStatus.status === 'overdue' || anodeStatus.status === 'warning') {
+      this.sendNotification('maintenance_due', `${this.t('anode_check')}: ${anodeStatus.text}`);
+    }
+    if (cleaningStatus.status === 'overdue' || cleaningStatus.status === 'warning') {
+      this.sendNotification('maintenance_due', `${this.t('cleaning_check')}: ${cleaningStatus.text}`);
+    }
+
     if (anodeDays === null && cleaningDays === null) {
       return html``;
     }
@@ -914,6 +938,11 @@ export class BoilerCard extends LitElement {
     const hasLowTempWarning = this.hasLowTempWarning();
 
     if (alerts.length === 0 && !hasLowTempWarning) return html``;
+
+    // Send notification for low temperature
+    if (hasLowTempWarning && avgTemp !== null) {
+      this.sendNotification('low_temperature', `${this.t('low_temperature')} (${avgTemp.toFixed(1)}°C)`);
+    }
 
     return html`
       ${hasLowTempWarning ? html`

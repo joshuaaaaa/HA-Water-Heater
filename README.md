@@ -1,6 +1,6 @@
 # HA Boiler Card 🌡️
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/joshuaaaaa/HA-Water-Heater/releases)
+[![Version](https://img.shields.io/badge/version-1.4.1-blue.svg)](https://github.com/joshuaaaaa/HA-Water-Heater/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
@@ -40,6 +40,7 @@ Custom Home Assistant Lovelace card pro zobrazení bojleru/ohřívače vody s te
 - Integrace s Home Assistant notification systémem
 - Konfigurovatelné události: maintenance_due, low_temperature, legionella_risk
 - Podpora všech HA notification services
+- **Throttling notifikací** - nastavitelný interval (výchozí 30 min) (v1.4.1)
 
 ### 🌍 Lokalizace (v1.3.0)
 - **5 jazyků**: Čeština, English, Deutsch, Slovenčina, Polski
@@ -173,6 +174,7 @@ title: Bojler s notifikacemi
 notifications:
   enabled: true
   service: notify.mobile_app
+  interval: 30  # Interval mezi notifikacemi v minutách (výchozí 30)
   events:
     - maintenance_due
     - low_temperature
@@ -330,6 +332,11 @@ Detailní návod: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 ---
 
 ## 📝 Co je nového
+
+### v1.4.1 (2024-12-29)
+- 🐛 Oprava opakovaného odesílání notifikací
+- ✨ Throttling notifikací s nastavitelným intervalem
+- ✨ Automatické notifikace pro údržbu a nízkou teplotu
 
 ### v1.4.0 (2024-12-29)
 - ✨ Ovládací tlačítko pro zapnutí/vypnutí bojleru
