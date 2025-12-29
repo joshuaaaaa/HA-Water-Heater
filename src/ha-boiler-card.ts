@@ -43,6 +43,9 @@ interface BoilerCardConfig extends LovelaceCardConfig {
   // Control button
   control_entity?: string;
   show_control_button?: boolean;
+  // Layout variants (v1.5.0)
+  layout_style?: 'default' | 'horizontal' | 'minimal' | 'wide';
+  button_style?: 'default' | 'switch' | 'icon' | 'minimal';
 }
 
 interface SensorConfig {
@@ -980,6 +983,52 @@ export class BoilerCard extends LitElement {
 
     if (!entityExists) return html``;
 
+    const buttonStyle = this.config.button_style || 'default';
+
+    // Switch style (iOS-like toggle)
+    if (buttonStyle === 'switch') {
+      return html`
+        <div class="control-section control-section-switch">
+          <span class="control-label-left">${this.t('control')}</span>
+          <label class="switch">
+            <input type="checkbox" .checked=${isOn} @change=${() => this.toggleControlEntity()}>
+            <span class="slider"></span>
+          </label>
+        </div>
+      `;
+    }
+
+    // Icon only style (just power icon)
+    if (buttonStyle === 'icon') {
+      return html`
+        <div class="control-section control-section-icon">
+          <button
+            class="control-button-icon ${isOn ? 'on' : 'off'}"
+            @click=${() => this.toggleControlEntity()}
+            title="${isOn ? this.t('turn_off') : this.t('turn_on')}"
+          >
+            <span class="power-icon">⏻</span>
+          </button>
+        </div>
+      `;
+    }
+
+    // Minimal style (text only, no gradients)
+    if (buttonStyle === 'minimal') {
+      return html`
+        <div class="control-section control-section-minimal">
+          <button
+            class="control-button-minimal ${isOn ? 'on' : 'off'}"
+            @click=${() => this.toggleControlEntity()}
+            title="${this.t('control')}"
+          >
+            ${isOn ? this.t('turn_off') : this.t('turn_on')}
+          </button>
+        </div>
+      `;
+    }
+
+    // Default style (current)
     return html`
       <div class="control-section">
         <button
@@ -1005,6 +1054,7 @@ export class BoilerCard extends LitElement {
       : null;
     const timeToTarget = this.calculateTimeToTarget();
     const isCompact = this.config.display_mode === 'compact';
+    const layoutStyle = this.config.layout_style || 'default';
 
     const sortedSensors = [...(this.config.sensors || [])].sort((a, b) => {
       const posA = a.position || 0;
@@ -1013,7 +1063,7 @@ export class BoilerCard extends LitElement {
     });
 
     return html`
-      <ha-card>
+      <ha-card class="layout-${layoutStyle}">
         <div class="card-content ${isCompact ? 'compact' : ''}">
           ${this.config.title ? html`<h2 class="card-title">${this.config.title}</h2>` : ''}
 
@@ -1021,7 +1071,7 @@ export class BoilerCard extends LitElement {
 
           ${this.renderControlButton()}
 
-          <div class="boiler-container ${isCompact ? 'compact' : ''}">
+          <div class="boiler-container ${isCompact ? 'compact' : ''} layout-${layoutStyle}">
             <div class="boiler-visual">
               ${this.renderBoilerSVG()}
 
@@ -1152,6 +1202,211 @@ export class BoilerCard extends LitElement {
 
       .control-label {
         user-select: none;
+      }
+
+      /* Button Style Variants (v1.5.0) */
+
+      /* Switch style */
+      .control-section-switch {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--secondary-background-color);
+        border-radius: 12px;
+        margin-bottom: 16px;
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .control-label-left {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 51px;
+        height: 28px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 28px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: #4CAF50;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(23px);
+      }
+
+      /* Icon style */
+      .control-section-icon {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .control-button-icon {
+        width: 56px;
+        height: 56px;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .control-button-icon.on {
+        background: #4CAF50;
+        color: white;
+      }
+
+      .control-button-icon.off {
+        background: #9E9E9E;
+        color: white;
+      }
+
+      .control-button-icon:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .power-icon {
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      /* Minimal style */
+      .control-section-minimal {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .control-button-minimal {
+        padding: 8px 20px;
+        border: 2px solid var(--divider-color);
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+      }
+
+      .control-button-minimal.on {
+        border-color: #4CAF50;
+        color: #4CAF50;
+      }
+
+      .control-button-minimal.off {
+        border-color: var(--secondary-text-color);
+        color: var(--secondary-text-color);
+      }
+
+      .control-button-minimal:hover {
+        background: var(--secondary-background-color);
+      }
+
+      /* Layout Style Variants (v1.5.0) */
+
+      /* Horizontal layout */
+      .layout-horizontal .boiler-container {
+        flex-direction: row;
+        max-width: 100%;
+      }
+
+      .layout-horizontal .boiler-visual {
+        min-width: 180px;
+      }
+
+      .layout-horizontal .boiler-svg {
+        width: 180px;
+        height: 270px;
+      }
+
+      /* Minimal layout - smaller, more compact */
+      .layout-minimal .boiler-container {
+        gap: 16px;
+      }
+
+      .layout-minimal .boiler-visual {
+        min-width: 150px;
+      }
+
+      .layout-minimal .boiler-svg {
+        width: 150px;
+        height: 225px;
+      }
+
+      .layout-minimal .card-title {
+        font-size: 20px;
+        margin-bottom: 12px;
+      }
+
+      .layout-minimal .sensor-row {
+        padding: 8px 12px;
+      }
+
+      .layout-minimal .sensor-value {
+        font-size: 16px;
+      }
+
+      /* Wide layout - bigger boiler, more space */
+      .layout-wide .boiler-container {
+        gap: 32px;
+      }
+
+      .layout-wide .boiler-visual {
+        min-width: 250px;
+      }
+
+      .layout-wide .boiler-svg {
+        width: 250px;
+        height: 375px;
+      }
+
+      .layout-wide .sensor-row {
+        padding: 14px;
+      }
+
+      .layout-wide .sensor-value {
+        font-size: 22px;
       }
 
       .boiler-container {

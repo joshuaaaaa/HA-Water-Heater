@@ -1,0 +1,410 @@
+# ================================================
+# UKÁZKY STYLŮ KARTY - VYZKOUŠEJ LOKÁLNĚ BEZ COMMITU!
+# ================================================
+#
+# Tento soubor obsahuje všechny kombinace stylů, které můžeš vyzkoušet.
+# Zkopíruj libovolnou konfiguraci do svého dashboard a vyzkoušej ji.
+# Až si vybereš oblíbenou, dej mi vědět a nahraju ji na GitHub!
+#
+# ================================================
+
+# ================================================
+# STYLY TLAČÍTKA (button_style)
+# ================================================
+
+# 1. DEFAULT (Výchozí) - Barevné tlačítko s gradientem
+type: custom:ha-boiler-card
+title: "1. Default Button"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: default  # nebo vypustit (je výchozí)
+layout_style: default
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 2. SWITCH - iOS-style přepínač
+type: custom:ha-boiler-card
+title: "2. Switch Button"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: switch  # ← iOS-style toggle switch
+layout_style: default
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 3. ICON - Pouze kulatá ikona power
+type: custom:ha-boiler-card
+title: "3. Icon Button"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: icon  # ← Jen ikona ⏻
+layout_style: default
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 4. MINIMAL - Minimalistické textové tlačítko
+type: custom:ha-boiler-card
+title: "4. Minimal Button"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: minimal  # ← Pouze text s rámečkem
+layout_style: default
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# ================================================
+# STYLY LAYOUTU (layout_style)
+# ================================================
+
+# 5. DEFAULT (Výchozí) - Běžná velikost
+type: custom:ha-boiler-card
+title: "5. Default Layout"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: default
+layout_style: default  # nebo vypustit (je výchozí)
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 6. HORIZONTAL - Horizontální rozložení
+type: custom:ha-boiler-card
+title: "6. Horizontal Layout"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: default
+layout_style: horizontal  # ← Bojler vlevo, senzory vpravo
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 7. MINIMAL - Menší, kompaktnější
+type: custom:ha-boiler-card
+title: "7. Minimal Layout"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: default
+layout_style: minimal  # ← Menší bojler (150px), menší písmo
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 8. WIDE - Větší, prostornější
+type: custom:ha-boiler-card
+title: "8. Wide Layout"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: default
+layout_style: wide  # ← Větší bojler (250px), větší písmo
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# ================================================
+# KOMBINACE STYLŮ - Nejlepší možnosti
+# ================================================
+
+# 9. Minimalistická karta - malá, switch tlačítko
+type: custom:ha-boiler-card
+title: "9. Compact & Clean"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: switch
+layout_style: minimal  # ← Malý bojler + switch = minimalistický styl
+theme: ocean
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 10. Velká přehledná karta - velký layout, ikona
+type: custom:ha-boiler-card
+title: "10. Big & Clear"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: icon
+layout_style: wide  # ← Velký bojler + ikona = přehledný styl
+theme: sunset
+show_average: true
+show_gradient: true
+show_stratification: true
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_2
+    name: Horní střed
+    position: 2
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_4
+    name: Dolní střed
+    position: 4
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 11. Horizontální s minimal tlačítkem
+type: custom:ha-boiler-card
+title: "11. Horizontal Minimal"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: minimal
+layout_style: horizontal  # ← Horizontální + minimal button
+theme: forest
+show_average: true
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 12. Bez tlačítka - jen zobrazení
+type: custom:ha-boiler-card
+title: "12. Display Only"
+show_control_button: false  # ← Žádné tlačítko
+layout_style: default
+theme: ice
+show_average: true
+show_gradient: true
+show_stratification: true
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# ================================================
+# DOPORUČENÉ KOMBINACE PRO RŮZNÉ POTŘEBY
+# ================================================
+
+# 13. PRO MOBIL - malá kompaktní karta
+type: custom:ha-boiler-card
+title: "📱 Mobil"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: icon  # Ikona zabere méně místa
+layout_style: minimal  # Menší velikost
+display_mode: compact
+theme: ocean
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+  - entity: sensor.boiler_temp_bottom
+    position: 5
+
+---
+
+# 14. PRO TABLET/DESKTOP - velká přehledná
+type: custom:ha-boiler-card
+title: "💻 Desktop"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: default  # Plné tlačítko s textem
+layout_style: wide  # Velká karta
+show_average: true
+show_gradient: true
+show_stratification: true
+show_sparkline: true
+theme: sunset
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_2
+    name: Horní střed
+    position: 2
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_4
+    name: Dolní střed
+    position: 4
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# 15. ELEGANTNÍ - switch + horizontal
+type: custom:ha-boiler-card
+title: "✨ Elegantní"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: switch  # iOS-style switch
+layout_style: horizontal  # Bojler vedle senzoř
+theme: fire
+show_average: true
+show_gradient: true
+advanced_animations: true
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Horní
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střední
+    position: 3
+  - entity: sensor.boiler_temp_bottom
+    name: Dolní
+    position: 5
+
+---
+
+# 16. TECHNICKÝ - všechny detaily
+type: custom:ha-boiler-card
+title: "🔧 Technický"
+show_control_button: true
+control_entity: switch.boiler_power
+button_style: minimal
+layout_style: wide
+show_average: true
+show_gradient: true
+show_stratification: true
+show_sparkline: true
+advanced_animations: true
+theme: ice
+heating_entity: binary_sensor.boiler_heating
+target_temp_entity: input_number.boiler_target_temp
+power_entity: sensor.boiler_power
+energy_cost: 4.5
+anode_last_change: '2024-01-15'
+cleaning_last_date: '2024-06-01'
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Vrchol
+    position: 1
+  - entity: sensor.boiler_temp_2
+    name: Horní střed
+    position: 2
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 3
+  - entity: sensor.boiler_temp_4
+    name: Dolní střed
+    position: 4
+  - entity: sensor.boiler_temp_bottom
+    name: Dno
+    position: 5
+
+---
+
+# ================================================
+# JAK VYZKOUŠET:
+# ================================================
+#
+# 1. Zkopíruj konfiguraci výše (mezi --- značkami)
+# 2. Vlož ji do svého Home Assistant dashboard (edit mode)
+# 3. Uprav entity podle tvých skutečných senzorů
+# 4. Uložit
+# 5. Podívej se, jak to vypadá
+# 6. Opakuj s jinými styly
+# 7. Až najdeš oblíbený, napiš mi číslo (1-16) a nahraju to na GitHub!
+#
+# TIPY:
+# - button_style: default | switch | icon | minimal
+# - layout_style: default | horizontal | minimal | wide
+# - Kombinuj je jak chceš!
+# - Přidej theme: ocean | sunset | forest | fire | ice
+#
+# ================================================
