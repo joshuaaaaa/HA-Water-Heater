@@ -328,13 +328,7 @@ Detailní návod: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - ✨ Hybridní ohřev
 - ✨ Animace
 
-Kompletní changelog: [CHANGELOG.md](CHANGELOG.md)
-
----
-
-## 🤝 Přispívání
-
-Příspěvky vítány! Viz [CONTRIBUTING.md](CONTRIBUTING.md)
+Další verze: [GitHub Releases](https://github.com/joshuaaaaa/HA-Water-Heater/releases)
 
 ---
 
