@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2024-12-29
+
+### Fixed
+- **Responsive layout issue**: Fixed temperature sensors overflowing container when card is resized
+  - Added `overflow: hidden` to main container and sensor rows
+  - Updated flex properties for better responsiveness
+  - Added `text-overflow: ellipsis` to sensor labels to handle long names
+  - Sensor values now use `flex-shrink: 0` to stay visible
+  - Sensors panel now properly adapts to container width with `min-width: 0`
+  - Improved overall layout flexibility for different card sizes
+
 ## [1.2.1] - 2024-12-28
 
 ### Fixed

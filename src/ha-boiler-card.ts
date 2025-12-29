@@ -695,8 +695,10 @@ export class BoilerCard extends LitElement {
       .boiler-container {
         display: flex;
         gap: 24px;
-        align-items: center;
-        justify-content: space-around;
+        align-items: flex-start;
+        justify-content: center;
+        width: 100%;
+        overflow: hidden;
       }
 
       .boiler-container.compact {
@@ -710,6 +712,11 @@ export class BoilerCard extends LitElement {
         flex-direction: column;
         align-items: center;
         gap: 12px;
+        min-width: 200px;
+      }
+
+      .boiler-visual.compact {
+        min-width: 150px;
       }
 
       .boiler-svg {
@@ -857,16 +864,17 @@ export class BoilerCard extends LitElement {
       }
 
       .sensors-panel {
-        flex: 1;
+        flex: 1 1 auto;
         display: flex;
         flex-direction: column;
         gap: 16px;
-        min-width: 200px;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
       }
 
       .sensors-panel.compact {
         gap: 12px;
-        min-width: 180px;
       }
 
       .sensors-list {
@@ -883,6 +891,8 @@ export class BoilerCard extends LitElement {
         background: var(--secondary-background-color);
         border-radius: 8px;
         transition: transform 0.2s, box-shadow 0.2s;
+        min-width: 0;
+        overflow: hidden;
       }
 
       .sensor-row.compact {
@@ -902,18 +912,26 @@ export class BoilerCard extends LitElement {
         display: flex;
         align-items: center;
         gap: 12px;
+        min-width: 0;
+        flex: 1;
       }
 
       .sensor-label {
         font-size: 14px;
         color: var(--secondary-text-color);
         font-weight: 400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 1;
       }
 
       .sensor-value {
         font-size: 20px;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
 
       .sensor-row.compact .sensor-value {
