@@ -4,13 +4,17 @@ Custom Lovelace card pro vizualizaci bojleru/ohřívače vody s teplotními senz
 
 ## Funkce
 
-- 🎨 **Vizuální reprezentace bojleru** s vlastním SVG designem
-- 🌡️ **Až 5 teplotních sensorů** uspořádaných od shora dolů
-- 📊 **Automatický výpočet průměrné teploty**
-- 🎨 **Barevná gradace podle teploty** (modrá → zelená → žlutá → oranžová → červená)
+- 🎨 **Detailní SVG nádrž** - izolace, potrubí, topné těleso, displej s teplotou
+- 🌡️ **Až 5 teplotních sensorů** uspořádaných od shora dolů, s hodnotami přímo v nádrži
+- 📊 **Plynulá teplotní stratifikace** počítaná z hodnot senzorů
+- 📏 **Teplotní stupnice** se značkou cílové teploty
+- 💧 **Zásoba teplé vody** v litrech, počet sprch a uložená energie
+- 📉 **Měření tepelné ztráty** a odhad, kdy voda vystydne
+- 📈 **Graf historie teplot** s vyznačenými úseky ohřevu
+- 🎛️ **Ovládání** - zapnutí/vypnutí, cílová teplota, režimy water_heater
 - 🔥 **Indikátor ohřívání** s animací
-- 🎯 **Zobrazení cílové teploty**
-- 📱 **Responzivní design**
+- 🧩 **Vizuální editor** karty
+- 📱 **Responzivní design** a podpora tmavého motivu
 
 ## Základní použití
 
@@ -71,6 +75,13 @@ sensors:
 | `show_gradient` | boolean | true | Barevná gradace podle teploty |
 | `min_temp` | number | 0 | Minimální teplota pro škálu |
 | `max_temp` | number | 100 | Maximální teplota pro škálu |
+| `tank_volume` | number | - | Objem nádrže v litrech (zapne výpočty teplé vody) |
+| `mixed_water_temp` | number | 40 | Užitná teplota vody u kohoutku (°C) |
+| `show_history_chart` | boolean | false | Graf historie teplot |
+| `show_target_control` | boolean | false | Tlačítka +/- pro cílovou teplotu |
+| `show_operation_modes` | boolean | false | Přepínač režimů water_heater entity |
+
+Kompletní přehled parametrů je v [README](https://github.com/joshuaaaaa/HA-Water-Heater#-nové-parametry-v160).
 
 ### Konfigurace sensorů
 
@@ -82,4 +93,4 @@ sensors:
 
 ## Více příkladů
 
-Kompletní dokumentaci a další příklady najdete v [README](https://github.com/your-username/ha-boiler-card).
+Kompletní dokumentaci a další příklady najdete v [README](https://github.com/joshuaaaaa/HA-Water-Heater).

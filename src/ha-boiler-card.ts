@@ -1,254 +1,26 @@
-import { LitElement, html, css, PropertyValues, TemplateResult, svg } from 'lit';
+import { LitElement, html, css, PropertyValues, TemplateResult, svg, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { HomeAssistant, LovelaceCardConfig } from 'custom-card-helpers';
+import { HomeAssistant } from 'custom-card-helpers';
+import {
+  AlertConfig,
+  BoilerCardConfig,
+  ColorConfig,
+  CustomLabels,
+  HeatLossInfo,
+  HeatingSource,
+  SensorConfig,
+  TempHistory,
+  TrendInfo,
+  WaterStats,
+} from './types';
+import { CARD_VERSION, DEFAULT_COLORS, TANK, THEMES, TRANSLATIONS, WATER_HEAT_CAPACITY } from './const';
+import './ha-boiler-card-editor';
 
-interface BoilerCardConfig extends LovelaceCardConfig {
-  type: string;
-  title?: string;
-  sensors?: SensorConfig[];
-  heating_entity?: string;
-  target_temp_entity?: string;
-  show_average?: boolean;
-  show_gradient?: boolean;
-  show_stratification?: boolean;
-  show_sparkline?: boolean;
-  min_temp?: number;
-  max_temp?: number;
-  display_mode?: 'normal' | 'compact';
-  heating_type?: 'electric' | 'solar' | 'gas' | 'heat_pump';
-  low_temp_warning?: number;
-  anode_last_change?: string;
-  anode_change_interval?: number;
-  cleaning_last_date?: string;
-  cleaning_interval?: number;
-  enable_more_info?: boolean;
-  // Energy tracking
-  power_entity?: string;
-  energy_cost?: number;
-  // Dual source heating
-  heating_sources?: HeatingSource[];
-  // Advanced animations
-  advanced_animations?: boolean;
-  // Custom colors
-  colors?: ColorConfig;
-  // Theme
-  theme?: 'ocean' | 'sunset' | 'forest' | 'fire' | 'ice' | 'custom';
-  // Alerts
-  alerts?: AlertConfig[];
-  // Notifications
-  notifications?: NotificationConfig;
-  // Localization
-  language?: 'cs' | 'en' | 'de' | 'sk' | 'pl';
-  custom_labels?: CustomLabels;
-  // Control button
-  control_entity?: string;
-  show_control_button?: boolean;
-  // Layout variants (v1.5.0)
-  layout_style?: 'default' | 'horizontal' | 'minimal' | 'wide';
-  button_style?: 'default' | 'switch' | 'icon' | 'minimal';
-}
+/** Domains whose target temperature this card knows how to change. */
+const SETTABLE_TARGET_DOMAINS = ['water_heater', 'climate', 'number', 'input_number'];
 
-interface SensorConfig {
-  entity: string;
-  name?: string;
-  position?: number;
-}
-
-interface HeatingSource {
-  entity: string;
-  type: 'electric' | 'solar' | 'gas' | 'heat_pump';
-  name?: string;
-  priority?: number;
-}
-
-interface TempHistory {
-  value: number;
-  timestamp: number;
-}
-
-interface ColorConfig {
-  boiler_fill?: string;
-  boiler_stroke?: string;
-  cold_water?: string;
-  warm_water?: string;
-  hot_water?: string;
-  gradient_start?: string;
-  gradient_end?: string;
-}
-
-interface AlertConfig {
-  type: 'temperature_drop' | 'legionella_risk' | 'unusual_consumption';
-  threshold?: number;
-  min_temp?: number;
-  duration?: number;
-  message?: string;
-  enabled?: boolean;
-}
-
-interface NotificationConfig {
-  service?: string;
-  events?: ('maintenance_due' | 'low_temperature' | 'high_consumption' | 'legionella_risk')[];
-  enabled?: boolean;
-  interval?: number; // Minutes between notifications (default 30)
-}
-
-interface CustomLabels {
-  average_temp?: string;
-  heating?: string;
-  target?: string;
-  anode_check?: string;
-  cleaning_check?: string;
-  days_remaining?: string;
-  overdue?: string;
-}
-
-// Theme color presets
-const THEMES: Record<string, ColorConfig> = {
-  ocean: {
-    boiler_fill: '#4DD0E1',
-    boiler_stroke: '#0097A7',
-    cold_water: '#B3E5FC',
-    warm_water: '#4FC3F7',
-    hot_water: '#0288D1',
-    gradient_start: '#E1F5FE',
-    gradient_end: '#01579B',
-  },
-  sunset: {
-    boiler_fill: '#FF9800',
-    boiler_stroke: '#E65100',
-    cold_water: '#FFE0B2',
-    warm_water: '#FFB74D',
-    hot_water: '#E64A19',
-    gradient_start: '#FFF3E0',
-    gradient_end: '#BF360C',
-  },
-  forest: {
-    boiler_fill: '#66BB6A',
-    boiler_stroke: '#2E7D32',
-    cold_water: '#C8E6C9',
-    warm_water: '#81C784',
-    hot_water: '#43A047',
-    gradient_start: '#E8F5E9',
-    gradient_end: '#1B5E20',
-  },
-  fire: {
-    boiler_fill: '#FF5722',
-    boiler_stroke: '#BF360C',
-    cold_water: '#FFCCBC',
-    warm_water: '#FF7043',
-    hot_water: '#D84315',
-    gradient_start: '#FBE9E7',
-    gradient_end: '#4E342E',
-  },
-  ice: {
-    boiler_fill: '#81D4FA',
-    boiler_stroke: '#0277BD',
-    cold_water: '#E1F5FE',
-    warm_water: '#4FC3F7',
-    hot_water: '#0288D1',
-    gradient_start: '#F1F8FB',
-    gradient_end: '#01579B',
-  },
-};
-
-// Localization strings
-const TRANSLATIONS: Record<string, Record<string, string>> = {
-  cs: {
-    average_temp: 'Průměrná teplota',
-    heating: 'Topí se',
-    target: 'Cílová teplota',
-    anode_check: 'Kontrola anody',
-    cleaning_check: 'Čištění',
-    days_remaining: 'zbývá dní',
-    overdue: 'po termínu',
-    power_consumption: 'Spotřeba',
-    heating_source: 'Zdroj ohřevu',
-    low_temperature: 'Nízká teplota!',
-    temperature_drop: 'Prudký pokles teploty!',
-    legionella_risk: 'Riziko legionely - ohřejte na 60°C',
-    unusual_consumption: 'Neobvyklá spotřeba energie',
-    maintenance_due: 'Údržba je potřeba',
-    turn_on: 'Zapnout',
-    turn_off: 'Vypnout',
-    control: 'Ovládání',
-  },
-  en: {
-    average_temp: 'Average Temperature',
-    heating: 'Heating',
-    target: 'Target Temperature',
-    anode_check: 'Anode Check',
-    cleaning_check: 'Cleaning',
-    days_remaining: 'days remaining',
-    overdue: 'overdue',
-    power_consumption: 'Consumption',
-    heating_source: 'Heating Source',
-    low_temperature: 'Low temperature!',
-    temperature_drop: 'Rapid temperature drop!',
-    legionella_risk: 'Legionella risk - heat to 60°C',
-    unusual_consumption: 'Unusual energy consumption',
-    maintenance_due: 'Maintenance required',
-    turn_on: 'Turn On',
-    turn_off: 'Turn Off',
-    control: 'Control',
-  },
-  de: {
-    average_temp: 'Durchschnittstemperatur',
-    heating: 'Heizung',
-    target: 'Zieltemperatur',
-    anode_check: 'Anode Prüfung',
-    cleaning_check: 'Reinigung',
-    days_remaining: 'Tage übrig',
-    overdue: 'überfällig',
-    power_consumption: 'Verbrauch',
-    heating_source: 'Heizquelle',
-    low_temperature: 'Niedrige Temperatur!',
-    temperature_drop: 'Schneller Temperaturabfall!',
-    legionella_risk: 'Legionellen-Risiko - auf 60°C erhitzen',
-    unusual_consumption: 'Ungewöhnlicher Energieverbrauch',
-    maintenance_due: 'Wartung erforderlich',
-    turn_on: 'Einschalten',
-    turn_off: 'Ausschalten',
-    control: 'Steuerung',
-  },
-  sk: {
-    average_temp: 'Priemerná teplota',
-    heating: 'Kúrenie',
-    target: 'Cieľová teplota',
-    anode_check: 'Kontrola anódy',
-    cleaning_check: 'Čistenie',
-    days_remaining: 'zostáva dní',
-    overdue: 'po termíne',
-    power_consumption: 'Spotreba',
-    heating_source: 'Zdroj kúrenia',
-    low_temperature: 'Nízka teplota!',
-    temperature_drop: 'Prudký pokles teploty!',
-    legionella_risk: 'Riziko legionely - ohrejte na 60°C',
-    unusual_consumption: 'Neobvyklá spotreba energie',
-    maintenance_due: 'Údržba je potrebná',
-    turn_on: 'Zapnúť',
-    turn_off: 'Vypnúť',
-    control: 'Ovládanie',
-  },
-  pl: {
-    average_temp: 'Średnia temperatura',
-    heating: 'Ogrzewanie',
-    target: 'Temperatura docelowa',
-    anode_check: 'Sprawdzenie anody',
-    cleaning_check: 'Czyszczenie',
-    days_remaining: 'dni pozostało',
-    overdue: 'po terminie',
-    power_consumption: 'Zużycie',
-    heating_source: 'Źródło ogrzewania',
-    low_temperature: 'Niska temperatura!',
-    temperature_drop: 'Szybki spadek temperatury!',
-    legionella_risk: 'Ryzyko legionelli - podgrzej do 60°C',
-    unusual_consumption: 'Niezwykłe zużycie energii',
-    maintenance_due: 'Wymagana konserwacja',
-    turn_on: 'Włącz',
-    turn_off: 'Wyłącz',
-    control: 'Sterowanie',
-  },
-};
+const STORAGE_PREFIX = 'ha-boiler-card:history:';
+const MAX_HISTORY_POINTS = 720;
 
 @customElement('ha-boiler-card')
 export class BoilerCard extends LitElement {
@@ -256,6 +28,11 @@ export class BoilerCard extends LitElement {
   @state() private config!: BoilerCardConfig;
   @state() private tempHistory: Map<string, TempHistory[]> = new Map();
   @state() private lastNotificationTime: Map<string, number> = new Map();
+  @state() private chartExpanded = false;
+
+  private lastSampleTime = 0;
+  private lastPersistTime = 0;
+  private storageKey = '';
 
   public setConfig(config: BoilerCardConfig): void {
     if (!config) {
@@ -275,8 +52,44 @@ export class BoilerCard extends LitElement {
       enable_more_info: true,
       energy_cost: 0,
       advanced_animations: true,
+      // v1.6.0 defaults
+      stratification_style: 'gradient',
+      show_scale: true,
+      show_sensor_markers: true,
+      show_display_panel: true,
+      show_hot_water_level: true,
+      show_insulation: true,
+      show_pipes: true,
+      show_legs: true,
+      show_water_stats: true,
+      show_trend: true,
+      show_heat_loss: true,
+      show_status_badges: true,
+      show_history_chart: false,
+      cold_water_temp: 10,
+      mixed_water_temp: 40,
+      shower_volume: 40,
+      history_duration: 120,
+      history_interval: 60,
+      persist_history: true,
+      temp_step: 1,
+      currency: '',
       ...config,
     };
+
+    this.chartExpanded = !!this.config.show_history_chart;
+    this.storageKey = STORAGE_PREFIX + this.getHistoryId();
+    this.loadHistory();
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.loadHistory();
+  }
+
+  public disconnectedCallback(): void {
+    this.persistHistory(true);
+    super.disconnectedCallback();
   }
 
   protected shouldUpdate(changedProps: PropertyValues): boolean {
@@ -284,56 +97,109 @@ export class BoilerCard extends LitElement {
       return false;
     }
 
-    if (changedProps.has('hass')) {
-      if (this.hass?.states && this.config.target_temp_entity) {
-        this.updateTempHistory();
-      }
-      return true;
+    if (changedProps.has('hass') && this.hass?.states) {
+      this.updateTempHistory();
     }
 
     return true;
   }
 
-  private updateTempHistory(): void {
-    if (!this.config.sensors) return;
+  // ---------------------------------------------------------------------------
+  // History handling
+  // ---------------------------------------------------------------------------
 
-    const now = Date.now();
-    const thirtyMinutesAgo = now - 30 * 60 * 1000;
+  /** Stable id for this card instance so stored history is not mixed up. */
+  private getHistoryId(): string {
+    const parts = [
+      this.config.title || '',
+      ...(this.config.sensors || []).map(s => s.entity),
+    ].join('|');
 
-    // Update history for each sensor
-    this.config.sensors.forEach(sensor => {
-      const temp = this.getSensorValue(sensor.entity);
-      if (temp === null) return;
+    let hash = 0;
+    for (let i = 0; i < parts.length; i++) {
+      hash = (hash << 5) - hash + parts.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+  }
 
-      if (!this.tempHistory.has(sensor.entity)) {
-        this.tempHistory.set(sensor.entity, []);
+  private getHistoryWindow(): number {
+    return (this.config.history_duration || 120) * 60 * 1000;
+  }
+
+  private trimHistory(entries: TempHistory[]): TempHistory[] {
+    const cutoff = Date.now() - this.getHistoryWindow();
+    const trimmed = entries.filter(h => h.timestamp > cutoff);
+    return trimmed.length > MAX_HISTORY_POINTS ? trimmed.slice(-MAX_HISTORY_POINTS) : trimmed;
+  }
+
+  private loadHistory(): void {
+    if (!this.config?.persist_history || !this.storageKey) return;
+    try {
+      const raw = window.localStorage.getItem(this.storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, TempHistory[]>;
+      const restored = new Map<string, TempHistory[]>();
+      Object.entries(parsed).forEach(([key, entries]) => {
+        if (!Array.isArray(entries)) return;
+        const valid = entries.filter(e => typeof e?.value === 'number' && typeof e?.timestamp === 'number');
+        restored.set(key, this.trimHistory(valid));
+      });
+      if (restored.size > 0) {
+        this.tempHistory = restored;
       }
-
-      const history = this.tempHistory.get(sensor.entity)!;
-      history.push({ value: temp, timestamp: now });
-
-      // Keep only last 30 minutes
-      this.tempHistory.set(
-        sensor.entity,
-        history.filter(h => h.timestamp > thirtyMinutesAgo)
-      );
-    });
-
-    // Update average history
-    const avgTemp = this.getAverageTemperature();
-    if (avgTemp !== null) {
-      if (!this.tempHistory.has('average')) {
-        this.tempHistory.set('average', []);
-      }
-
-      const history = this.tempHistory.get('average')!;
-      history.push({ value: avgTemp, timestamp: now });
-      this.tempHistory.set(
-        'average',
-        history.filter(h => h.timestamp > thirtyMinutesAgo)
-      );
+    } catch {
+      // Storage may be unavailable (private mode, quota, disabled) - history is optional.
     }
   }
+
+  private persistHistory(force = false): void {
+    if (!this.config?.persist_history || !this.storageKey) return;
+
+    const now = Date.now();
+    if (!force && now - this.lastPersistTime < 60 * 1000) return;
+    this.lastPersistTime = now;
+
+    try {
+      const plain: Record<string, TempHistory[]> = {};
+      this.tempHistory.forEach((entries, key) => {
+        plain[key] = entries;
+      });
+      window.localStorage.setItem(this.storageKey, JSON.stringify(plain));
+    } catch {
+      // Ignore storage failures - the card keeps working with in-memory history.
+    }
+  }
+
+  private updateTempHistory(): void {
+    if (!this.config.sensors || this.config.sensors.length === 0) return;
+
+    const now = Date.now();
+    const interval = Math.max(5, this.config.history_interval || 60) * 1000;
+    if (now - this.lastSampleTime < interval) return;
+    this.lastSampleTime = now;
+
+    const heating = this.isHeatingActive();
+    const record = (key: string, value: number): void => {
+      const history = this.tempHistory.get(key) || [];
+      history.push({ value, timestamp: now, heating });
+      this.tempHistory.set(key, this.trimHistory(history));
+    };
+
+    this.config.sensors.forEach(sensor => {
+      const temp = this.getSensorValue(sensor.entity);
+      if (temp !== null) record(sensor.entity, temp);
+    });
+
+    const avgTemp = this.getAverageTemperature();
+    if (avgTemp !== null) record('average', avgTemp);
+
+    this.persistHistory();
+  }
+
+  // ---------------------------------------------------------------------------
+  // State helpers
+  // ---------------------------------------------------------------------------
 
   private getSensorValue(entityId: string): number | null {
     if (!this.hass?.states) return null;
@@ -359,7 +225,12 @@ export class BoilerCard extends LitElement {
   private isHeating(): boolean {
     if (!this.config.heating_entity || !this.hass?.states) return false;
     const state = this.hass.states[this.config.heating_entity];
-    return state && (state.state === 'on' || state.state === 'heating');
+    return !!state && (state.state === 'on' || state.state === 'heating');
+  }
+
+  /** True when either the legacy heating entity or any configured source is running. */
+  private isHeatingActive(): boolean {
+    return this.isHeating() || this.getActiveHeatingSources().length > 0;
   }
 
   private getActiveHeatingSources(): HeatingSource[] {
@@ -382,43 +253,475 @@ export class BoilerCard extends LitElement {
     return { power, cost: costPerHour };
   }
 
-  // Get active colors from theme or custom config
-  private getColors(): ColorConfig {
-    const defaultColors: ColorConfig = {
-      boiler_fill: '#4CAF50',
-      boiler_stroke: '#388E3C',
-      cold_water: '#2196F3',
-      warm_water: '#FF9800',
-      hot_water: '#F44336',
-      gradient_start: '#2196F3',
-      gradient_end: '#F44336',
-    };
+  private getEnergyToday(): { energy: number; cost: number; unit: string } | null {
+    if (!this.config.energy_today_entity || !this.hass?.states) return null;
 
+    const energy = this.getSensorValue(this.config.energy_today_entity);
+    if (energy === null) return null;
+
+    const state = this.hass.states[this.config.energy_today_entity];
+    const unit = state?.attributes?.unit_of_measurement || 'kWh';
+
+    return { energy, cost: energy * (this.config.energy_cost || 0), unit };
+  }
+
+  /** Target temperature, either from a plain sensor or from a water_heater/climate attribute. */
+  private getTargetTemperature(): number | null {
+    if (!this.config.target_temp_entity || !this.hass?.states) return null;
+
+    const state = this.hass.states[this.config.target_temp_entity];
+    if (!state) return null;
+
+    const attribute = state.attributes?.temperature;
+    if (typeof attribute === 'number' && !isNaN(attribute)) return attribute;
+
+    const value = parseFloat(state.state);
+    return isNaN(value) ? null : value;
+  }
+
+  private canSetTargetTemperature(): boolean {
+    if (!this.config.target_temp_entity || !this.hass?.states) return false;
+    if (!this.hass.states[this.config.target_temp_entity]) return false;
+    const domain = this.config.target_temp_entity.split('.')[0];
+    return SETTABLE_TARGET_DOMAINS.includes(domain);
+  }
+
+  private getTargetTempStep(): number {
+    const state = this.config.target_temp_entity
+      ? this.hass?.states?.[this.config.target_temp_entity]
+      : undefined;
+    const step = state?.attributes?.target_temp_step ?? state?.attributes?.step;
+    if (typeof step === 'number' && step > 0) return step;
+    return this.config.temp_step && this.config.temp_step > 0 ? this.config.temp_step : 1;
+  }
+
+  private setTargetTemperature(delta: number): void {
+    if (!this.canSetTargetTemperature()) return;
+
+    const entityId = this.config.target_temp_entity!;
+    const current = this.getTargetTemperature();
+    if (current === null) return;
+
+    const state = this.hass.states[entityId];
+    const min = state?.attributes?.min_temp ?? state?.attributes?.min ?? this.config.min_temp ?? 0;
+    const max = state?.attributes?.max_temp ?? state?.attributes?.max ?? this.config.max_temp ?? 100;
+
+    const step = this.getTargetTempStep();
+    const decimals = step < 1 ? 1 : 0;
+    const raw = current + delta * step;
+    const value = parseFloat(Math.min(max, Math.max(min, raw)).toFixed(decimals));
+
+    if (value === current) return;
+
+    const domain = entityId.split('.')[0];
+    if (domain === 'water_heater' || domain === 'climate') {
+      this.hass.callService(domain, 'set_temperature', { entity_id: entityId, temperature: value });
+    } else {
+      this.hass.callService(domain, 'set_value', { entity_id: entityId, value });
+    }
+  }
+
+  private getOperationModes(): { modes: string[]; current: string } | null {
+    const entityId = this.config.target_temp_entity || this.config.control_entity;
+    if (!entityId || !this.hass?.states) return null;
+    if (entityId.split('.')[0] !== 'water_heater') return null;
+
+    const state = this.hass.states[entityId];
+    const modes = state?.attributes?.operation_list;
+    if (!Array.isArray(modes) || modes.length === 0) return null;
+
+    return { modes, current: state.attributes?.operation_mode || state.state };
+  }
+
+  private setOperationMode(mode: string): void {
+    const entityId = this.config.target_temp_entity || this.config.control_entity;
+    if (!entityId) return;
+    this.hass.callService('water_heater', 'set_operation_mode', {
+      entity_id: entityId,
+      operation_mode: mode,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Derived values
+  // ---------------------------------------------------------------------------
+
+  /** Temperature profile from top to bottom of the tank, based on sensor positions. */
+  private getTemperatureProfile(): { ratio: number; temp: number; sensor: SensorConfig }[] {
+    const sensors = [...(this.config.sensors || [])]
+      .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+    const profile: { ratio: number; temp: number; sensor: SensorConfig }[] = [];
+    const count = sensors.length;
+    if (count === 0) return profile;
+
+    sensors.forEach((sensor, index) => {
+      const temp = this.getSensorValue(sensor.entity);
+      if (temp === null) return;
+      // Each sensor represents a layer; place it in the middle of its layer.
+      profile.push({ ratio: (index + 0.5) / count, temp, sensor });
+    });
+
+    return profile;
+  }
+
+  /** 0..1 share of the tank (from the top) that is at or above the usable temperature. */
+  private getHotWaterFraction(): number | null {
+    const profile = this.getTemperatureProfile();
+    if (profile.length === 0) return null;
+
+    const usable = this.config.mixed_water_temp ?? 40;
+
+    if (profile.length === 1) {
+      return profile[0].temp >= usable ? 1 : 0;
+    }
+
+    if (profile[0].temp < usable) return 0;
+
+    for (let i = 0; i < profile.length - 1; i++) {
+      const upper = profile[i];
+      const lower = profile[i + 1];
+      if (upper.temp >= usable && lower.temp < usable) {
+        const span = upper.temp - lower.temp;
+        const share = span === 0 ? 0 : (upper.temp - usable) / span;
+        return upper.ratio + share * (lower.ratio - upper.ratio);
+      }
+    }
+
+    return 1;
+  }
+
+  private getWaterStats(): WaterStats | null {
+    if (!this.config.tank_volume || this.config.tank_volume <= 0) return null;
+
+    const avgTemp = this.getAverageTemperature();
+    if (avgTemp === null) return null;
+
+    const volume = this.config.tank_volume;
+    const cold = this.config.cold_water_temp ?? 10;
+    const mixed = this.config.mixed_water_temp ?? 40;
+    const showerVolume = this.config.shower_volume || 40;
+
+    if (mixed <= cold) return null;
+
+    const usableLiters = Math.max(0, (volume * (avgTemp - cold)) / (mixed - cold));
+    const storedEnergy = Math.max(0, (volume * WATER_HEAT_CAPACITY * (avgTemp - cold)) / 3600);
+    const hotFraction = this.getHotWaterFraction();
+
+    return {
+      usableLiters,
+      showers: usableLiters / showerVolume,
+      storedEnergy,
+      hotFraction: hotFraction ?? Math.max(0, Math.min(1, (avgTemp - cold) / (mixed - cold))),
+    };
+  }
+
+  /**
+   * Cooling rate measured over the most recent stretch where no heat source was on.
+   * Lets the user see how well the tank keeps its heat and when it will run cold.
+   */
+  private getHeatLoss(): HeatLossInfo | null {
+    const history = this.tempHistory.get('average');
+    if (!history || history.length < 4) return null;
+
+    // Take the latest contiguous run of samples recorded while not heating.
+    const run: TempHistory[] = [];
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].heating) break;
+      run.unshift(history[i]);
+    }
+
+    if (run.length < 4) return null;
+
+    const spanMinutes = (run[run.length - 1].timestamp - run[0].timestamp) / 60000;
+    if (spanMinutes < 20) return null;
+
+    // Least squares slope in °C per minute.
+    const n = run.length;
+    const t0 = run[0].timestamp;
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    run.forEach(point => {
+      const x = (point.timestamp - t0) / 60000;
+      sumX += x;
+      sumY += point.value;
+      sumXY += x * point.value;
+      sumXX += x * x;
+    });
+
+    const denominator = n * sumXX - sumX * sumX;
+    if (denominator === 0) return null;
+
+    const slope = (n * sumXY - sumX * sumY) / denominator;
+    const ratePerHour = -slope * 60;
+    if (ratePerHour <= 0.05) return null;
+
+    const threshold = this.config.low_temp_warning ?? this.config.mixed_water_temp ?? 40;
+    const current = run[run.length - 1].value;
+    const hoursToThreshold = current > threshold ? (current - threshold) / ratePerHour : 0;
+
+    return { ratePerHour, hoursToThreshold, threshold };
+  }
+
+  private getTrend(entityId: string): TrendInfo | null {
+    if (!this.config.show_trend) return null;
+
+    const history = this.tempHistory.get(entityId);
+    if (!history || history.length < 2) return null;
+
+    const now = Date.now();
+    const reference = history.find(h => h.timestamp >= now - 15 * 60 * 1000) || history[0];
+    const latest = history[history.length - 1];
+    if (reference === latest) return null;
+
+    const delta = latest.value - reference.value;
+    const direction = Math.abs(delta) < 0.3 ? 'flat' : delta > 0 ? 'up' : 'down';
+
+    return { direction, delta };
+  }
+
+  private getStatus(): { key: string; icon: string; className: string } {
+    if (this.isHeatingActive()) {
+      return { key: 'status_heating', icon: '🔥', className: 'heating' };
+    }
+
+    const heatLoss = this.getHeatLoss();
+    if (heatLoss && heatLoss.ratePerHour > 0.3) {
+      return { key: 'status_cooling', icon: '❄️', className: 'cooling' };
+    }
+
+    return { key: 'status_ready', icon: '✅', className: 'ready' };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Colors and translations
+  // ---------------------------------------------------------------------------
+
+  private getColors(): ColorConfig {
     if (this.config.theme && this.config.theme !== 'custom' && THEMES[this.config.theme]) {
-      return { ...defaultColors, ...THEMES[this.config.theme] };
+      return { ...DEFAULT_COLORS, ...THEMES[this.config.theme], ...(this.config.colors || {}) };
     }
 
     if (this.config.colors) {
-      return { ...defaultColors, ...this.config.colors };
+      return { ...DEFAULT_COLORS, ...this.config.colors };
     }
 
-    return defaultColors;
+    return { ...DEFAULT_COLORS };
   }
 
-  // Get translated string
-  private t(key: string): string {
+  private t(key: string, replacements?: Record<string, string | number>): string {
     const language = this.config.language || 'cs';
     const translations = TRANSLATIONS[language] || TRANSLATIONS.cs;
 
-    // Check custom labels first
-    if (this.config.custom_labels && this.config.custom_labels[key as keyof CustomLabels]) {
-      return this.config.custom_labels[key as keyof CustomLabels]!;
+    const custom = this.config.custom_labels?.[key as keyof CustomLabels];
+    let text = custom || translations[key] || TRANSLATIONS.en[key] || key;
+
+    if (replacements) {
+      Object.entries(replacements).forEach(([name, value]) => {
+        text = text.replace(`{${name}}`, String(value));
+      });
     }
 
-    return translations[key] || key;
+    return text;
   }
 
-  // Check alerts and return active ones
+  private static hexToRgb(hex: string): [number, number, number] | null {
+    const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+    if (!match) return null;
+    return [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)];
+  }
+
+  private static srgbToLinear(channel: number): number {
+    const c = channel / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  private static linearToSrgb(channel: number): number {
+    const c = channel <= 0.0031308 ? channel * 12.92 : 1.055 * Math.pow(channel, 1 / 2.4) - 0.055;
+    return Math.round(Math.max(0, Math.min(1, c)) * 255);
+  }
+
+  private static rgbToOklab([r, g, b]: [number, number, number]): [number, number, number] {
+    const lr = BoilerCard.srgbToLinear(r);
+    const lg = BoilerCard.srgbToLinear(g);
+    const lb = BoilerCard.srgbToLinear(b);
+
+    const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+    const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+    const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+
+    return [
+      0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+    ];
+  }
+
+  private static oklabToRgb([L, a, b]: [number, number, number]): [number, number, number] {
+    const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+    const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+    const s = Math.pow(L - 0.0894841775 * a - 1.2914855480 * b, 3);
+
+    return [
+      BoilerCard.linearToSrgb(+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+      BoilerCard.linearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+      BoilerCard.linearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
+    ];
+  }
+
+  /**
+   * Blends two colors in OKLab. Mixing cold blue with warm orange straight in
+   * sRGB produces a muddy brown and rotating the hue produces a distracting
+   * green; OKLab keeps the ramp perceptually even with a pale mid tone.
+   */
+  private static mix(from: string, to: string, ratio: number): [number, number, number] | null {
+    const a = BoilerCard.hexToRgb(from);
+    const b = BoilerCard.hexToRgb(to);
+    if (!a || !b) return null;
+
+    const labA = BoilerCard.rgbToOklab(a);
+    const labB = BoilerCard.rgbToOklab(b);
+    const mixed = labA.map((value, index) => value + (labB[index] - value) * ratio) as [number, number, number];
+
+    return BoilerCard.oklabToRgb(mixed);
+  }
+
+  /**
+   * Keeps a temperature color readable as text: mid-range blends are very pale,
+   * which disappears on a light background, so lightness is clamped to a band
+   * that works on both light and dark themes.
+   */
+  private static forText(rgb: [number, number, number]): [number, number, number] {
+    const [lightness, a, b] = BoilerCard.rgbToOklab(rgb);
+    const clamped = Math.min(0.64, Math.max(0.46, lightness));
+    return BoilerCard.oklabToRgb([clamped, a * 1.3, b * 1.3]);
+  }
+
+  /**
+   * Smoothly interpolated cold -> warm -> hot color for a temperature.
+   * `forText` returns a variant with enough contrast to be readable as a label.
+   */
+  private getTemperatureColor(temp: number | null, forText = false): string {
+    if (temp === null) return '#888';
+
+    const colors = this.getColors();
+    const min = this.config.min_temp ?? 0;
+    const max = this.config.max_temp ?? 100;
+    const ratio = Math.max(0, Math.min(1, (temp - min) / (max - min || 1)));
+
+    const cold = colors.cold_water || DEFAULT_COLORS.cold_water;
+    const warm = colors.warm_water || DEFAULT_COLORS.warm_water;
+    const hot = colors.hot_water || DEFAULT_COLORS.hot_water;
+
+    const mixed = ratio < 0.5
+      ? BoilerCard.mix(cold, warm, ratio / 0.5)
+      : BoilerCard.mix(warm, hot, (ratio - 0.5) / 0.5);
+
+    if (mixed) {
+      const [r, g, b] = forText ? BoilerCard.forText(mixed) : mixed;
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // Non-hex colors (css variables, named colors) fall back to discrete steps.
+    return ratio < 0.3 ? cold : ratio < 0.6 ? warm : hot;
+  }
+
+  private getHeatingIcon(type: string): string {
+    switch (type) {
+      case 'solar': return '☀️';
+      case 'gas': return '🔥';
+      case 'heat_pump': return '🌡️';
+      case 'electric':
+      default: return '⚡';
+    }
+  }
+
+  private getHeatingLabel(type: string): string {
+    switch (type) {
+      case 'solar': return this.t('solar_heating');
+      case 'gas': return this.t('gas_heating');
+      case 'heat_pump': return this.t('heat_pump_heating');
+      case 'electric':
+      default: return this.t('electric_heating');
+    }
+  }
+
+  private formatDuration(hours: number): string {
+    if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`;
+    if (hours < 24) {
+      const wholeHours = Math.floor(hours);
+      const minutes = Math.round((hours - wholeHours) * 60);
+      return minutes > 0 ? `${wholeHours} h ${minutes} min` : `${wholeHours} h`;
+    }
+    return `${Math.round(hours / 24)} d`;
+  }
+
+  private calculateTimeToTarget(): string | null {
+    const targetTemp = this.getTargetTemperature();
+    const avgTemp = this.getAverageTemperature();
+
+    if (targetTemp === null || avgTemp === null) return null;
+    if (avgTemp >= targetTemp) return null;
+    if (!this.isHeatingActive()) return null;
+
+    const history = this.tempHistory.get('average');
+    if (!history || history.length < 2) return null;
+
+    const heatingRun = history.filter(h => h.heating !== false);
+    const samples = heatingRun.length >= 2 ? heatingRun : history;
+
+    const oldest = samples[0];
+    const newest = samples[samples.length - 1];
+    const timeDiff = (newest.timestamp - oldest.timestamp) / 1000 / 60;
+    const tempDiff = newest.value - oldest.value;
+
+    if (timeDiff < 5 || tempDiff <= 0) return null;
+
+    const heatingRate = tempDiff / timeDiff;
+    const remainingTemp = targetTemp - avgTemp;
+    const minutesToTarget = Math.ceil(remainingTemp / heatingRate);
+
+    if (minutesToTarget < 60) {
+      return `~${minutesToTarget} min`;
+    }
+    const hours = Math.floor(minutesToTarget / 60);
+    const minutes = minutesToTarget % 60;
+    return `~${hours}h ${minutes}min`;
+  }
+
+  private getDaysSince(dateString?: string): number | null {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    const diffTime = Date.now() - date.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  private getMaintenanceStatus(daysSince: number | null, interval: number): { status: 'ok' | 'warning' | 'overdue', text: string } {
+    if (daysSince === null) {
+      return { status: 'ok', text: this.t('not_set') };
+    }
+
+    const remaining = interval - daysSince;
+
+    if (remaining <= 0) {
+      return { status: 'overdue', text: this.t('overdue_days', { days: -remaining }) };
+    }
+    if (remaining <= 30) {
+      return { status: 'warning', text: this.t('remaining_days', { days: remaining }) };
+    }
+    return { status: 'ok', text: this.t('remaining_days', { days: remaining }) };
+  }
+
+  private hasLowTempWarning(): boolean {
+    if (!this.config.low_temp_warning) return false;
+    const avgTemp = this.getAverageTemperature();
+    return avgTemp !== null && avgTemp < this.config.low_temp_warning;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Alerts and services
+  // ---------------------------------------------------------------------------
+
   private checkAlerts(): AlertConfig[] {
     if (!this.config.alerts) return [];
 
@@ -430,7 +733,6 @@ export class BoilerCard extends LitElement {
 
       switch (alert.type) {
         case 'temperature_drop': {
-          // Check temperature drop over time
           const history = this.tempHistory.get('average');
           if (history && history.length >= 2 && avgTemp !== null) {
             const oneHourAgo = Date.now() - 60 * 60 * 1000;
@@ -443,10 +745,9 @@ export class BoilerCard extends LitElement {
         }
 
         case 'legionella_risk': {
-          // Check if temperature has been below threshold for too long
           const history = this.tempHistory.get('average');
           const minTemp = alert.min_temp || 60;
-          const duration = (alert.duration || 168) * 60 * 60 * 1000; // Convert days to ms
+          const duration = (alert.duration || 168) * 60 * 60 * 1000; // hours to ms
 
           if (history && history.length > 0) {
             const cutoffTime = Date.now() - duration;
@@ -459,14 +760,9 @@ export class BoilerCard extends LitElement {
         }
 
         case 'unusual_consumption': {
-          // Check for unusual power consumption
           const consumption = this.getPowerConsumption();
-          if (consumption && alert.threshold) {
-            // Simple check - could be enhanced with historical average
-            const threshold = alert.threshold;
-            if (consumption.power > threshold) {
-              activeAlerts.push(alert);
-            }
+          if (consumption && alert.threshold && consumption.power > alert.threshold) {
+            activeAlerts.push(alert);
           }
           break;
         }
@@ -476,24 +772,20 @@ export class BoilerCard extends LitElement {
     return activeAlerts;
   }
 
-  // Send notification to Home Assistant
   private sendNotification(event: string, message: string): void {
     if (!this.config.notifications?.enabled) return;
     if (!this.config.notifications.events?.includes(event as any)) return;
     if (!this.hass) return;
 
-    // Check throttling - default 30 minutes between notifications
     const intervalMinutes = this.config.notifications.interval || 30;
     const intervalMs = intervalMinutes * 60 * 1000;
     const now = Date.now();
     const lastTime = this.lastNotificationTime.get(event);
 
     if (lastTime && (now - lastTime) < intervalMs) {
-      // Skip notification - too soon since last one
       return;
     }
 
-    // Update last notification time
     this.lastNotificationTime.set(event, now);
 
     const service = this.config.notifications.service || 'persistent_notification.create';
@@ -505,7 +797,6 @@ export class BoilerCard extends LitElement {
     });
   }
 
-  // Toggle control entity (switch/input_boolean)
   private toggleControlEntity(): void {
     if (!this.config.control_entity || !this.hass?.states) return;
 
@@ -521,120 +812,350 @@ export class BoilerCard extends LitElement {
     });
   }
 
-  // Get control entity state
   private getControlState(): boolean {
     if (!this.config.control_entity || !this.hass?.states) return false;
     const state = this.hass.states[this.config.control_entity];
     return state?.state === 'on';
   }
 
-  private getTemperatureColor(temp: number | null): string {
-    if (temp === null) return '#888';
+  private showMoreInfo(entityId?: string): void {
+    if (!entityId || !this.config.enable_more_info) return;
 
+    this.dispatchEvent(new CustomEvent('hass-more-info', {
+      detail: { entityId },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // SVG rendering
+  // ---------------------------------------------------------------------------
+
+  /** Maps a temperature onto the vertical axis of the tank. */
+  private tempToY(temp: number): number {
+    const min = this.config.min_temp ?? 0;
+    const max = this.config.max_temp ?? 100;
+    const ratio = Math.max(0, Math.min(1, (temp - min) / (max - min || 1)));
+    return TANK.y + TANK.height * (1 - ratio);
+  }
+
+  private renderWaterGradientStops(): TemplateResult {
     const colors = this.getColors();
-    const min = this.config.min_temp || 0;
-    const max = this.config.max_temp || 100;
-    const ratio = Math.max(0, Math.min(1, (temp - min) / (max - min)));
+    const profile = this.getTemperatureProfile();
 
-    // Use custom colors based on temperature ranges
-    if (ratio < 0.3) {
-      // Cold water
-      return colors.cold_water || '#2196F3';
-    } else if (ratio < 0.6) {
-      // Warm water
-      return colors.warm_water || '#FF9800';
-    } else {
-      // Hot water
-      return colors.hot_water || '#F44336';
+    if (profile.length === 0 || !this.config.show_stratification) {
+      const avgTemp = this.getAverageTemperature();
+      const top = this.config.show_gradient && avgTemp !== null
+        ? this.getTemperatureColor(avgTemp)
+        : colors.gradient_start || DEFAULT_COLORS.gradient_start;
+      const bottom = this.config.show_gradient && avgTemp !== null
+        ? this.getTemperatureColor(avgTemp - 5)
+        : colors.gradient_end || DEFAULT_COLORS.gradient_end;
+
+      return svg`
+        <stop offset="0%" stop-color="${top}" stop-opacity="0.95"/>
+        <stop offset="100%" stop-color="${bottom}" stop-opacity="0.75"/>
+      `;
     }
+
+    // One stop per sensor, plus edge stops so the top and bottom keep their color.
+    const stops = profile.map(entry => svg`
+      <stop offset="${(entry.ratio * 100).toFixed(1)}%" stop-color="${this.getTemperatureColor(entry.temp)}" stop-opacity="0.95"/>
+    `);
+
+    return svg`
+      <stop offset="0%" stop-color="${this.getTemperatureColor(profile[0].temp)}" stop-opacity="0.95"/>
+      ${stops}
+      <stop offset="100%" stop-color="${this.getTemperatureColor(profile[profile.length - 1].temp)}" stop-opacity="0.9"/>
+    `;
   }
 
-  private getHeatingIcon(type: string): string {
-    switch (type) {
-      case 'solar': return '☀️';
-      case 'gas': return '🔥';
-      case 'heat_pump': return '🌡️';
-      case 'electric':
-      default: return '⚡';
-    }
+  /** Discrete layers, one per sensor - an alternative to the smooth gradient. */
+  private renderStratificationLayers(): TemplateResult {
+    const profile = this.getTemperatureProfile();
+    if (profile.length === 0) return svg``;
+
+    const layerHeight = TANK.height / profile.length;
+
+    return svg`${profile.map((entry, index) => svg`
+      <rect
+        x="${TANK.x}"
+        y="${TANK.y + index * layerHeight}"
+        width="${TANK.width}"
+        height="${layerHeight}"
+        fill="${this.getTemperatureColor(entry.temp)}"
+        opacity="0.9"
+      />
+    `)}`;
   }
 
-  private getHeatingLabel(type: string): string {
-    switch (type) {
-      case 'solar': return 'Solární ohřev';
-      case 'gas': return 'Plynový ohřev';
-      case 'heat_pump': return 'Tepelné čerpadlo';
-      case 'electric':
-      default: return 'Elektrický ohřev';
-    }
+  private renderBubbles(): TemplateResult {
+    if (!this.config.advanced_animations || !this.isHeatingActive()) return svg``;
+
+    const bubbles = [
+      { x: 68, r: 2.5, cls: 'bubble-1' },
+      { x: 84, r: 1.8, cls: 'bubble-2' },
+      { x: 100, r: 3, cls: 'bubble-3' },
+      { x: 116, r: 2, cls: 'bubble-4' },
+      { x: 132, r: 2.4, cls: 'bubble-5' },
+    ];
+
+    return svg`
+      <g class="bubbles">
+        ${bubbles.map(bubble => svg`
+          <circle cx="${bubble.x}" cy="236" r="${bubble.r}" fill="#ffffff" opacity="0.65"
+                  class="bubble ${bubble.cls}"/>
+        `)}
+      </g>
+    `;
   }
 
-  private calculateTimeToTarget(): string | null {
-    if (!this.config.target_temp_entity) return null;
+  /** Heating coil at the bottom of the tank, glowing while a source is running. */
+  private renderHeatingElement(): TemplateResult {
+    const active = this.isHeatingActive();
 
-    const targetTemp = this.getSensorValue(this.config.target_temp_entity);
+    return svg`
+      <g class="heating-element ${active ? 'active' : ''}">
+        <path d="M 66 238 L 74 232 L 82 244 L 90 232 L 98 244 L 106 232 L 114 244 L 122 232 L 130 238"
+              fill="none"
+              stroke="${active ? '#FF6B35' : 'var(--disabled-text-color, #9e9e9e)'}"
+              stroke-width="3.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              filter="${active ? 'url(#glow)' : 'none'}"/>
+      </g>
+    `;
+  }
+
+  /** Dashed line marking how much of the tank is hot enough to use. */
+  private renderHotWaterLevel(): TemplateResult {
+    if (!this.config.show_hot_water_level) return svg``;
+
+    const fraction = this.getHotWaterFraction();
+    if (fraction === null || fraction <= 0 || fraction >= 1) return svg``;
+
+    const y = TANK.y + TANK.height * fraction;
+    const usable = this.config.mixed_water_temp ?? 40;
+
+    return svg`
+      <g class="hot-level">
+        <rect x="${TANK.x}" y="${TANK.y}" width="${TANK.width}" height="${y - TANK.y}"
+              fill="#ffffff" opacity="0.12"/>
+        <line x1="${TANK.x}" y1="${y}" x2="${TANK.x + TANK.width}" y2="${y}"
+              stroke="#ffffff" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.85"/>
+        <text x="${TANK.x + 16}" y="${y - 5}" class="level-label">≥ ${usable}°</text>
+      </g>
+    `;
+  }
+
+  /** Temperature axis with labels plus a marker for the target temperature. */
+  private renderScale(): TemplateResult {
+    if (!this.config.show_scale) return svg``;
+
+    const min = this.config.min_temp ?? 0;
+    const max = this.config.max_temp ?? 100;
+    const steps = 4;
+
+    const ticks = Array.from({ length: steps + 1 }, (_, index) => {
+      const value = min + ((max - min) * index) / steps;
+      const y = this.tempToY(value);
+      return svg`
+        <g>
+          <line x1="42" y1="${y}" x2="${TANK.x - 2}" y2="${y}" class="scale-tick"/>
+          <text x="39" y="${y + 3}" class="scale-label" text-anchor="end">${Math.round(value)}°</text>
+        </g>
+      `;
+    });
+
+    const target = this.getTargetTemperature();
+    const targetMarker = target !== null && target >= min && target <= max ? svg`
+      <g class="target-marker">
+        <line x1="${TANK.x}" y1="${this.tempToY(target)}" x2="${TANK.x + TANK.width}" y2="${this.tempToY(target)}"
+              class="target-line"/>
+        <polygon points="${TANK.x + TANK.width + 2},${this.tempToY(target) - 4} ${TANK.x + TANK.width + 2},${this.tempToY(target) + 4} ${TANK.x + TANK.width - 4},${this.tempToY(target)}"
+                 class="target-arrow"/>
+        <title>${this.t('target')}: ${target.toFixed(1)}°C</title>
+      </g>
+    ` : svg``;
+
+    return svg`
+      <g class="scale">
+        ${ticks}
+        ${targetMarker}
+      </g>
+    `;
+  }
+
+  /** Per-sensor readouts drawn directly on the tank. */
+  private renderSensorMarkers(): TemplateResult {
+    if (!this.config.show_sensor_markers) return svg``;
+
+    const profile = this.getTemperatureProfile();
+    if (profile.length === 0) return svg``;
+
+    return svg`${profile.map(entry => {
+      const y = TANK.y + TANK.height * entry.ratio;
+      const name = entry.sensor.name
+        || this.hass?.states?.[entry.sensor.entity]?.attributes?.friendly_name
+        || entry.sensor.entity;
+
+      return svg`
+        <g class="sensor-marker" @click=${(e: Event) => { e.stopPropagation(); this.showMoreInfo(entry.sensor.entity); }}>
+          <title>${name}: ${entry.temp.toFixed(1)} °C</title>
+          <line x1="${TANK.x + 2}" y1="${y}" x2="${TANK.x + TANK.width - 2}" y2="${y}"
+                class="marker-line"/>
+          <circle cx="${TANK.x + 7}" cy="${y}" r="3" fill="#ffffff" opacity="0.9"/>
+          <rect x="${TANK.x + TANK.width - 42}" y="${y - 8}" width="38" height="16" rx="8"
+                fill="rgba(0, 0, 0, 0.42)"/>
+          <text x="${TANK.x + TANK.width - 23}" y="${y + 4}" class="marker-label" text-anchor="middle">
+            ${entry.temp.toFixed(1)}°
+          </text>
+        </g>
+      `;
+    })}`;
+  }
+
+  private renderPipes(): TemplateResult {
+    if (!this.config.show_pipes) return svg``;
+
+    const flowing = this.isHeatingActive() && this.config.advanced_animations;
+
+    return svg`
+      <g class="pipes">
+        <!-- Hot water outlet -->
+        <line x1="${TANK.x + TANK.width - 6}" y1="72" x2="182" y2="72" class="pipe pipe-hot"/>
+        ${flowing ? svg`<line x1="${TANK.x + TANK.width - 6}" y1="72" x2="182" y2="72" class="pipe-flow flow-out"/>` : svg``}
+        <circle cx="182" cy="72" r="4" class="pipe-cap pipe-hot-cap"/>
+
+        <!-- Cold water inlet -->
+        <line x1="${TANK.x + TANK.width - 6}" y1="228" x2="182" y2="228" class="pipe pipe-cold"/>
+        ${flowing ? svg`<line x1="182" y1="228" x2="${TANK.x + TANK.width - 6}" y2="228" class="pipe-flow flow-in"/>` : svg``}
+        <circle cx="182" cy="228" r="4" class="pipe-cap pipe-cold-cap"/>
+      </g>
+    `;
+  }
+
+  /** Control panel on top of the tank showing the average temperature and a status LED. */
+  private renderDisplayPanel(avgTemp: number | null): TemplateResult {
+    if (!this.config.show_display_panel) return svg``;
+
+    const status = this.getStatus();
+    const target = this.getTargetTemperature();
+
+    return svg`
+      <g class="display-panel">
+        <rect x="56" y="10" width="88" height="32" rx="7" class="panel-bg"/>
+        <circle cx="67" cy="26" r="3.5" class="panel-led led-${status.className}"/>
+        <text x="106" y="31" text-anchor="middle" class="panel-temp">
+          ${avgTemp !== null ? `${avgTemp.toFixed(1)}°` : '--'}
+        </text>
+        ${target !== null ? svg`<text x="136" y="39" text-anchor="end" class="panel-target">🎯 ${target.toFixed(0)}°</text>` : svg``}
+        <title>${this.t(status.key)}${avgTemp !== null ? ` · ${avgTemp.toFixed(1)} °C` : ''}</title>
+      </g>
+    `;
+  }
+
+  private renderBoilerSVG(): TemplateResult {
+    const colors = this.getColors();
     const avgTemp = this.getAverageTemperature();
+    const strokeColor = colors.boiler_stroke || DEFAULT_COLORS.boiler_stroke;
+    const isCompact = this.config.display_mode === 'compact';
+    const useLayers = this.config.show_stratification && this.config.stratification_style === 'layers';
+    const infoEntity = this.config.control_entity || this.config.heating_entity;
 
-    if (targetTemp === null || avgTemp === null) return null;
-    if (avgTemp >= targetTemp) return null;
-    if (!this.isHeating() && this.getActiveHeatingSources().length === 0) return null;
+    return html`
+      <svg
+        class="boiler-svg ${isCompact ? 'compact' : ''} ${this.config.enable_more_info && infoEntity ? 'clickable' : ''}"
+        viewBox="0 0 200 300"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="${this.t('average_temp')}: ${avgTemp !== null ? avgTemp.toFixed(1) : '--'} °C"
+        @click=${() => this.showMoreInfo(infoEntity)}
+      >
+        <defs>
+          <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            ${this.renderWaterGradientStops()}
+          </linearGradient>
 
-    const history = this.tempHistory.get('average');
-    if (!history || history.length < 2) return null;
+          <linearGradient id="tankShine" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+            <stop offset="35%" stop-color="#ffffff" stop-opacity="0.05"/>
+            <stop offset="100%" stop-color="#000000" stop-opacity="0.18"/>
+          </linearGradient>
 
-    const oldest = history[0];
-    const newest = history[history.length - 1];
-    const timeDiff = (newest.timestamp - oldest.timestamp) / 1000 / 60;
-    const tempDiff = newest.value - oldest.value;
+          <clipPath id="tankClip">
+            <rect x="${TANK.x}" y="${TANK.y}" width="${TANK.width}" height="${TANK.height}"
+                  rx="${TANK.radius}" ry="${TANK.radius}"/>
+          </clipPath>
 
-    if (timeDiff < 5 || tempDiff <= 0) return null;
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
 
-    const heatingRate = tempDiff / timeDiff;
-    const remainingTemp = targetTemp - avgTemp;
-    const minutesToTarget = Math.ceil(remainingTemp / heatingRate);
+        <!-- Legs -->
+        ${this.config.show_legs ? svg`
+          <g class="legs">
+            <rect x="64" y="248" width="9" height="20" rx="2" class="leg"/>
+            <rect x="127" y="248" width="9" height="20" rx="2" class="leg"/>
+            <rect x="56" y="266" width="88" height="5" rx="2.5" class="leg-base"/>
+          </g>
+        ` : svg``}
 
-    if (minutesToTarget < 60) {
-      return `~${minutesToTarget} min`;
-    } else {
-      const hours = Math.floor(minutesToTarget / 60);
-      const minutes = minutesToTarget % 60;
-      return `~${hours}h ${minutes}min`;
-    }
+        <!-- Insulation jacket -->
+        ${this.config.show_insulation ? svg`
+          <rect x="${TANK.x - 7}" y="${TANK.y - 7}" width="${TANK.width + 14}" height="${TANK.height + 14}"
+                rx="${TANK.radius + 5}" ry="${TANK.radius + 5}" class="insulation"/>
+        ` : svg``}
+
+        ${this.renderPipes()}
+
+        <!-- Water body -->
+        <g clip-path="url(#tankClip)">
+          ${useLayers
+            ? this.renderStratificationLayers()
+            : svg`<rect x="${TANK.x}" y="${TANK.y}" width="${TANK.width}" height="${TANK.height}" fill="url(#waterGradient)"/>`}
+
+          ${this.renderHotWaterLevel()}
+          ${this.renderHeatingElement()}
+          ${this.renderBubbles()}
+
+          <rect x="${TANK.x}" y="${TANK.y}" width="${TANK.width}" height="${TANK.height}" fill="url(#tankShine)"/>
+          ${this.renderSensorMarkers()}
+        </g>
+
+        <!-- Tank outline -->
+        <rect x="${TANK.x}" y="${TANK.y}" width="${TANK.width}" height="${TANK.height}"
+              rx="${TANK.radius}" ry="${TANK.radius}"
+              fill="none" stroke="${strokeColor}" stroke-width="2.5"/>
+
+        ${this.renderScale()}
+
+        ${this.renderDisplayPanel(avgTemp)}
+      </svg>
+    `;
   }
 
-  private getDaysSince(dateString?: string): number | null {
-    if (!dateString) return null;
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffTime = now.getTime() - date.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
-    } catch {
-      return null;
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // HTML rendering
+  // ---------------------------------------------------------------------------
 
-  private getMaintenanceStatus(daysSince: number | null, interval: number): { status: 'ok' | 'warning' | 'overdue', text: string } {
-    if (daysSince === null) {
-      return { status: 'ok', text: 'Nenastaveno' };
-    }
+  private renderTrend(entityId: string): TemplateResult | typeof nothing {
+    const trend = this.getTrend(entityId);
+    if (!trend) return nothing;
 
-    const remaining = interval - daysSince;
+    const icon = trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '▬';
 
-    if (remaining <= 0) {
-      return { status: 'overdue', text: `Po termínu (${-remaining} dní)` };
-    } else if (remaining <= 30) {
-      return { status: 'warning', text: `Zbývá ${remaining} dní` };
-    } else {
-      return { status: 'ok', text: `Zbývá ${remaining} dní` };
-    }
-  }
-
-  private hasLowTempWarning(): boolean {
-    if (!this.config.low_temp_warning) return false;
-    const avgTemp = this.getAverageTemperature();
-    return avgTemp !== null && avgTemp < this.config.low_temp_warning;
+    return html`
+      <span class="trend trend-${trend.direction}" title="${trend.delta >= 0 ? '+' : ''}${trend.delta.toFixed(1)} °C">
+        ${icon} ${Math.abs(trend.delta) >= 0.1 ? `${trend.delta > 0 ? '+' : '−'}${Math.abs(trend.delta).toFixed(1)}°` : ''}
+      </span>
+    `;
   }
 
   private renderSparkline(entityId: string): TemplateResult {
@@ -648,180 +1169,35 @@ export class BoilerCard extends LitElement {
     const maxVal = Math.max(...values);
     const range = maxVal - minVal || 1;
 
-    const width = 40;
+    const width = 48;
     const height = 20;
     const points = values.map((val, idx) => {
       const x = (idx / (values.length - 1)) * width;
       const y = height - ((val - minVal) / range) * height;
-      return `${x},${y}`;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
 
-    return svg`
-      <svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <polyline
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          points="${points}"
-        />
-      </svg>
-    `;
-  }
-
-  private renderBubbles(): TemplateResult {
-    if (!this.config.advanced_animations) return html``;
-    if (!this.isHeating() && this.getActiveHeatingSources().length === 0) return html``;
-
-    return svg`
-      <g class="bubbles">
-        <circle cx="80" cy="240" r="3" fill="#fff" opacity="0.6" class="bubble bubble-1"/>
-        <circle cx="95" cy="235" r="2" fill="#fff" opacity="0.5" class="bubble bubble-2"/>
-        <circle cx="105" cy="242" r="2.5" fill="#fff" opacity="0.7" class="bubble bubble-3"/>
-        <circle cx="115" cy="238" r="2" fill="#fff" opacity="0.6" class="bubble bubble-4"/>
-      </g>
-    `;
-  }
-
-  private renderStratificationLayers(): TemplateResult {
-    if (!this.config.show_stratification || !this.config.sensors) {
-      return html``;
-    }
-
-    const sortedSensors = [...this.config.sensors].sort((a, b) => {
-      const posA = a.position || 0;
-      const posB = b.position || 0;
-      return posA - posB;
-    });
-
-    const layers = sortedSensors.map((sensor, index) => {
-      const temp = this.getSensorValue(sensor.entity);
-      const color = this.getTemperatureColor(temp);
-
-      const layerHeight = 200 / 5;
-      const position = (sensor.position || 1) - 1;
-      const y = 50 + position * layerHeight;
-
-      return svg`
-        <rect
-          x="51"
-          y="${y + 1}"
-          width="98"
-          height="${layerHeight - 2}"
-          fill="${color}"
-          opacity="0.4"
-        />
-      `;
-    });
-
-    return svg`${layers}`;
-  }
-
-  private renderBoilerSVG(): TemplateResult {
-    const isHeating = this.isHeating();
-    const activeSources = this.getActiveHeatingSources();
-    const avgTemp = this.getAverageTemperature();
-    const colors = this.getColors();
-
-    const fillColor = this.config.show_gradient && avgTemp !== null
-      ? this.getTemperatureColor(avgTemp)
-      : colors.boiler_fill || '#4A90E2';
-
-    const strokeColor = colors.boiler_stroke || '#333';
-    const isCompact = this.config.display_mode === 'compact';
-
     return html`
-      <svg class="boiler-svg ${isCompact ? 'compact' : ''}" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="boilerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:${colors.gradient_start || fillColor};stop-opacity:0.3" />
-            <stop offset="100%" style="stop-color:${colors.gradient_end || fillColor};stop-opacity:0.9" />
-          </linearGradient>
-
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-
-        <!-- Stratification layers -->
-        ${this.renderStratificationLayers()}
-
-        <!-- Tank body -->
-        <rect x="50" y="50" width="100" height="200" rx="10" ry="10"
-              fill="${this.config.show_stratification ? 'none' : 'url(#boilerGradient)'}"
-              stroke="${strokeColor}"
-              stroke-width="2"/>
-
-        <!-- Top cap -->
-        <ellipse cx="100" cy="50" rx="50" ry="15"
-                 fill="${fillColor}"
-                 stroke="${strokeColor}"
-                 stroke-width="2"
-                 opacity="0.8"/>
-
-        <!-- Bottom cap -->
-        <ellipse cx="100" cy="250" rx="50" ry="15"
-                 fill="${fillColor}"
-                 stroke="${strokeColor}"
-                 stroke-width="2"
-                 opacity="0.6"/>
-
-        <!-- Heating element indicator -->
-        ${(isHeating || activeSources.length > 0) ? svg`
-          <rect x="70" y="240" width="60" height="8" rx="4"
-                fill="#FF6B35"
-                filter="url(#glow)"
-                class="heating-pulse"/>
-        ` : ''}
-
-        <!-- Bubbles animation -->
-        ${this.renderBubbles()}
-
-        <!-- Pipe connections -->
-        <circle cx="140" cy="80" r="8" fill="#666" stroke="#333" stroke-width="1"/>
-        <rect x="140" y="76" width="30" height="8" fill="#666" stroke="#333" stroke-width="1"/>
-
-        <circle cx="140" cy="220" r="8" fill="#666" stroke="#333" stroke-width="1"/>
-        <rect x="140" y="216" width="30" height="8" fill="#666" stroke="#333" stroke-width="1"/>
-
-        <!-- Temperature markers -->
-        <line x1="45" y1="80" x2="50" y2="80" stroke="#999" stroke-width="1"/>
-        <line x1="45" y1="115" x2="50" y2="115" stroke="#999" stroke-width="1"/>
-        <line x1="45" y1="150" x2="50" y2="150" stroke="#999" stroke-width="1"/>
-        <line x1="45" y1="185" x2="50" y2="185" stroke="#999" stroke-width="1"/>
-        <line x1="45" y1="220" x2="50" y2="220" stroke="#999" stroke-width="1"/>
+      <svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <polyline fill="none" stroke="currentColor" stroke-width="1.5" points="${points}"/>
       </svg>
     `;
   }
 
-  private handleSensorClick(entityId: string): void {
-    if (!this.config.enable_more_info) return;
-
-    const event = new CustomEvent('hass-more-info', {
-      detail: { entityId },
-      bubbles: true,
-      composed: true,
-    });
-    this.dispatchEvent(event);
-  }
-
-  private renderSensor(sensor: SensorConfig, index: number): TemplateResult {
+  private renderSensor(sensor: SensorConfig): TemplateResult {
     const state = this.hass?.states?.[sensor.entity];
     const temp = this.getSensorValue(sensor.entity);
     const unit = state?.attributes?.unit_of_measurement || '°C';
     const name = sensor.name || state?.attributes?.friendly_name || sensor.entity;
-    const color = this.getTemperatureColor(temp);
+    const color = this.getTemperatureColor(temp, true);
     const isCompact = this.config.display_mode === 'compact';
     const entityExists = !!state;
 
     return html`
       <div
         class="sensor-row ${this.config.enable_more_info ? 'clickable' : ''} ${isCompact ? 'compact' : ''} ${!entityExists ? 'unavailable' : ''}"
-        @click=${() => this.handleSensorClick(sensor.entity)}
-        title="${!entityExists ? 'Entita nenalezena: ' + sensor.entity : ''}"
+        @click=${() => this.showMoreInfo(sensor.entity)}
+        title="${!entityExists ? `${this.t('unavailable_entity')}: ${sensor.entity}` : name}"
       >
         <div class="sensor-info">
           <div class="sensor-label">
@@ -829,26 +1205,129 @@ export class BoilerCard extends LitElement {
           </div>
           ${this.renderSparkline(sensor.entity)}
         </div>
-        <div class="sensor-value" style="color: ${color}">
-          ${temp !== null ? temp.toFixed(1) : (entityExists ? '--' : 'N/A')} ${unit}
+        <div class="sensor-readout">
+          ${this.renderTrend(sensor.entity)}
+          <div class="sensor-value" style="color: ${color}">
+            ${temp !== null ? temp.toFixed(1) : (entityExists ? '--' : 'N/A')} ${unit}
+          </div>
         </div>
+      </div>
+    `;
+  }
+
+  /** Compact overview chips - status, hot water, power, target. */
+  private renderStatusBadges(): TemplateResult {
+    if (!this.config.show_status_badges) return html``;
+
+    const status = this.getStatus();
+    const avgTemp = this.getAverageTemperature();
+    const target = this.getTargetTemperature();
+    const stats = this.getWaterStats();
+    const consumption = this.getPowerConsumption();
+
+    return html`
+      <div class="badges">
+        <div class="badge badge-${status.className}">
+          <span class="badge-icon">${status.icon}</span>
+          <span>${this.t(status.key)}</span>
+        </div>
+
+        ${avgTemp !== null ? html`
+          <div class="badge">
+            <span class="badge-icon">🌡️</span>
+            <span style="color: ${this.getTemperatureColor(avgTemp, true)}">${avgTemp.toFixed(1)} °C</span>
+          </div>
+        ` : ''}
+
+        ${target !== null ? html`
+          <div class="badge">
+            <span class="badge-icon">🎯</span>
+            <span>${target.toFixed(1)} °C</span>
+          </div>
+        ` : ''}
+
+        ${stats ? html`
+          <div class="badge">
+            <span class="badge-icon">🚿</span>
+            <span>${Math.round(stats.usableLiters)} l</span>
+          </div>
+        ` : ''}
+
+        ${consumption && consumption.power > 0 ? html`
+          <div class="badge">
+            <span class="badge-icon">⚡</span>
+            <span>${(consumption.power / 1000).toFixed(2)} kW</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  /** Usable hot water, showers left, stored energy and measured standby loss. */
+  private renderWaterStats(): TemplateResult {
+    if (!this.config.show_water_stats) return html``;
+
+    const stats = this.getWaterStats();
+    const heatLoss = this.config.show_heat_loss ? this.getHeatLoss() : null;
+
+    if (!stats && !heatLoss) return html``;
+
+    return html`
+      <div class="water-stats">
+        ${stats ? html`
+          <div class="stat">
+            <div class="stat-label">💧 ${this.t('hot_water')}</div>
+            <div class="stat-value">${Math.round(stats.usableLiters)} l</div>
+            <div class="stat-sub">≈ ${stats.showers.toFixed(1)} ${this.t('showers')}</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">🔋 ${this.t('stored_energy')}</div>
+            <div class="stat-value">${stats.storedEnergy.toFixed(1)} kWh</div>
+            ${this.config.energy_cost ? html`
+              <div class="stat-sub">≈ ${(stats.storedEnergy * this.config.energy_cost).toFixed(2)} ${this.config.currency || ''}</div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        ${heatLoss ? html`
+          <div class="stat">
+            <div class="stat-label">📉 ${this.t('heat_loss')}</div>
+            <div class="stat-value">${heatLoss.ratePerHour.toFixed(1)} °C/h</div>
+            ${heatLoss.hoursToThreshold !== null && heatLoss.hoursToThreshold > 0 ? html`
+              <div class="stat-sub">${this.t('time_to_cold')} ${this.formatDuration(heatLoss.hoursToThreshold)}</div>
+            ` : ''}
+          </div>
+        ` : ''}
       </div>
     `;
   }
 
   private renderEnergyInfo(): TemplateResult {
     const consumption = this.getPowerConsumption();
-    if (!consumption) return html``;
+    const today = this.getEnergyToday();
+    if (!consumption && !today) return html``;
 
     return html`
       <div class="energy-info">
-        <div class="energy-label">💡 Spotřeba</div>
+        <div class="energy-label">💡 ${this.t('power_consumption')}</div>
         <div class="energy-values">
-          <div class="energy-power">${(consumption.power / 1000).toFixed(2)} kW</div>
-          ${this.config.energy_cost ? html`
-            <div class="energy-cost">${consumption.cost.toFixed(2)} Kč/h</div>
+          ${consumption ? html`
+            <div class="energy-power">${(consumption.power / 1000).toFixed(2)} kW</div>
+            ${this.config.energy_cost ? html`
+              <div class="energy-cost">${consumption.cost.toFixed(2)} ${this.config.currency || ''}/h</div>
+            ` : ''}
           ` : ''}
         </div>
+        ${today ? html`
+          <div class="energy-values energy-today">
+            <div class="energy-today-label">${this.t('energy_today')}</div>
+            <div class="energy-power">${today.energy.toFixed(2)} ${today.unit}</div>
+            ${this.config.energy_cost ? html`
+              <div class="energy-cost">${today.cost.toFixed(2)} ${this.config.currency || ''}</div>
+            ` : ''}
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -858,8 +1337,7 @@ export class BoilerCard extends LitElement {
 
     // Legacy single source
     if (this.config.heating_entity && !this.config.heating_sources) {
-      const isHeating = this.isHeating();
-      if (!isHeating) return html``;
+      if (!this.isHeating()) return html``;
 
       return html`
         <div class="heating-indicator ${this.config.display_mode === 'compact' ? 'compact' : ''}">
@@ -869,7 +1347,6 @@ export class BoilerCard extends LitElement {
       `;
     }
 
-    // Dual/multi source
     if (activeSources.length === 0) return html``;
 
     return html`
@@ -885,6 +1362,158 @@ export class BoilerCard extends LitElement {
     `;
   }
 
+  /** Target temperature readout, optionally with +/- buttons. */
+  private renderTargetTemp(): TemplateResult {
+    const target = this.getTargetTemperature();
+    if (target === null) return html``;
+
+    const timeToTarget = this.calculateTimeToTarget();
+    const isCompact = this.config.display_mode === 'compact';
+    const editable = !!this.config.show_target_control && this.canSetTargetTemperature();
+
+    return html`
+      <div class="target-temp ${isCompact ? 'compact' : ''}">
+        ${editable ? html`
+          <div class="target-control">
+            <button class="step-button" @click=${(e: Event) => { e.stopPropagation(); this.setTargetTemperature(-1); }}
+                    aria-label="-">−</button>
+            <div class="target-value">${target.toFixed(1)} °C</div>
+            <button class="step-button" @click=${(e: Event) => { e.stopPropagation(); this.setTargetTemperature(1); }}
+                    aria-label="+">+</button>
+          </div>
+        ` : html`
+          <div>${this.t('target')}: ${target.toFixed(1)} °C</div>
+        `}
+        ${timeToTarget ? html`<div class="time-estimate">⏱️ ${timeToTarget}</div>` : ''}
+      </div>
+    `;
+  }
+
+  private renderOperationModes(): TemplateResult {
+    if (!this.config.show_operation_modes) return html``;
+
+    const modes = this.getOperationModes();
+    if (!modes) return html``;
+
+    return html`
+      <div class="operation-modes">
+        <div class="operation-label">${this.t('operation_mode')}</div>
+        <div class="operation-chips">
+          ${modes.modes.map(mode => html`
+            <button
+              class="mode-chip ${mode === modes.current ? 'active' : ''}"
+              @click=${() => this.setOperationMode(mode)}
+            >
+              ${this.t(`mode_${mode.replace(/\s+/g, '_').toLowerCase()}`) || mode}
+            </button>
+          `)}
+        </div>
+      </div>
+    `;
+  }
+
+  /** Larger temperature chart built from the history the card collects. */
+  private renderHistoryChart(): TemplateResult {
+    if (!this.config.show_history_chart) return html``;
+
+    const history = this.tempHistory.get('average') || [];
+
+    return html`
+      <div class="history-section">
+        <button class="history-header" @click=${() => { this.chartExpanded = !this.chartExpanded; }}>
+          <span>📈 ${this.t('history')}</span>
+          <span class="history-toggle">${this.chartExpanded ? '▾' : '▸'}</span>
+        </button>
+
+        ${this.chartExpanded ? (history.length < 2
+          ? html`<div class="no-history">${this.t('no_history')}</div>`
+          : this.renderChartSvg(history)) : ''}
+      </div>
+    `;
+  }
+
+  private renderChartSvg(history: TempHistory[]): TemplateResult {
+    const width = 300;
+    const height = 120;
+    const padding = { top: 10, right: 8, bottom: 18, left: 28 };
+    const plotWidth = width - padding.left - padding.right;
+    const plotHeight = height - padding.top - padding.bottom;
+
+    const target = this.getTargetTemperature();
+    const values = history.map(h => h.value);
+    if (target !== null) values.push(target);
+
+    const rawMin = Math.min(...values);
+    const rawMax = Math.max(...values);
+    const pad = Math.max(1, (rawMax - rawMin) * 0.15);
+    const minVal = rawMin - pad;
+    const maxVal = rawMax + pad;
+    const range = maxVal - minVal || 1;
+
+    const firstTs = history[0].timestamp;
+    const lastTs = history[history.length - 1].timestamp;
+    const timeSpan = lastTs - firstTs || 1;
+
+    const toX = (ts: number): number => padding.left + ((ts - firstTs) / timeSpan) * plotWidth;
+    const toY = (value: number): number => padding.top + (1 - (value - minVal) / range) * plotHeight;
+
+    const points = history.map(h => `${toX(h.timestamp).toFixed(1)},${toY(h.value).toFixed(1)}`);
+    const linePath = `M ${points.join(' L ')}`;
+    const areaPath = `${linePath} L ${padding.left + plotWidth},${padding.top + plotHeight} L ${padding.left},${padding.top + plotHeight} Z`;
+
+    // Shade the stretches where a heat source was running.
+    const heatingBands: TemplateResult[] = [];
+    let bandStart: number | null = null;
+    history.forEach((point, index) => {
+      if (point.heating && bandStart === null) bandStart = point.timestamp;
+      const isLast = index === history.length - 1;
+      if ((!point.heating || isLast) && bandStart !== null) {
+        const start = bandStart;
+        heatingBands.push(svg`
+          <rect x="${toX(start)}" y="${padding.top}" width="${Math.max(1, toX(point.timestamp) - toX(start))}"
+                height="${plotHeight}" class="chart-heating-band"/>
+        `);
+        bandStart = null;
+      }
+    });
+
+    const formatTime = (ts: number): string =>
+      new Date(ts).toLocaleTimeString(this.hass?.locale?.language || undefined, { hour: '2-digit', minute: '2-digit' });
+
+    return html`
+      <svg class="history-chart" viewBox="0 0 ${width} ${height}" role="img">
+        <defs>
+          <linearGradient id="chartArea" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="var(--primary-color, #03a9f4)" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="var(--primary-color, #03a9f4)" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+
+        ${heatingBands}
+
+        ${[maxVal, (maxVal + minVal) / 2, minVal].map(value => svg`
+          <line x1="${padding.left}" y1="${toY(value)}" x2="${width - padding.right}" y2="${toY(value)}"
+                class="chart-grid"/>
+          <text x="${padding.left - 4}" y="${toY(value) + 3}" class="chart-label" text-anchor="end">
+            ${value.toFixed(0)}°
+          </text>
+        `)}
+
+        ${target !== null ? svg`
+          <line x1="${padding.left}" y1="${toY(target)}" x2="${width - padding.right}" y2="${toY(target)}"
+                class="chart-target"/>
+        ` : svg``}
+
+        <path d="${areaPath}" fill="url(#chartArea)"/>
+        <path d="${linePath}" class="chart-line"/>
+        <circle cx="${toX(lastTs)}" cy="${toY(history[history.length - 1].value)}" r="3" class="chart-dot"/>
+
+        <text x="${padding.left}" y="${height - 4}" class="chart-label">${formatTime(firstTs)}</text>
+        <text x="${width - padding.right}" y="${height - 4}" class="chart-label" text-anchor="end">${formatTime(lastTs)}</text>
+      </svg>
+    `;
+  }
+
   private renderMaintenanceInfo(): TemplateResult {
     const anodeDays = this.getDaysSince(this.config.anode_last_change);
     const cleaningDays = this.getDaysSince(this.config.cleaning_last_date);
@@ -892,11 +1521,10 @@ export class BoilerCard extends LitElement {
     const anodeStatus = this.getMaintenanceStatus(anodeDays, this.config.anode_change_interval || 365);
     const cleaningStatus = this.getMaintenanceStatus(cleaningDays, this.config.cleaning_interval || 180);
 
-    // Send maintenance notifications if due
-    if (anodeStatus.status === 'overdue' || anodeStatus.status === 'warning') {
+    if (anodeDays !== null && (anodeStatus.status === 'overdue' || anodeStatus.status === 'warning')) {
       this.sendNotification('maintenance_due', `${this.t('anode_check')}: ${anodeStatus.text}`);
     }
-    if (cleaningStatus.status === 'overdue' || cleaningStatus.status === 'warning') {
+    if (cleaningDays !== null && (cleaningStatus.status === 'overdue' || cleaningStatus.status === 'warning')) {
       this.sendNotification('maintenance_due', `${this.t('cleaning_check')}: ${cleaningStatus.text}`);
     }
 
@@ -906,17 +1534,15 @@ export class BoilerCard extends LitElement {
 
     return html`
       <div class="maintenance-section">
-        <div class="maintenance-title">Údržba</div>
+        <div class="maintenance-title">${this.t('maintenance')}</div>
 
         ${anodeDays !== null ? html`
           <div class="maintenance-item ${anodeStatus.status}">
             <div class="maintenance-label">
               <span class="maintenance-icon">🔧</span>
-              Anoda
+              ${this.t('anode')}
             </div>
-            <div class="maintenance-value">
-              ${anodeStatus.text}
-            </div>
+            <div class="maintenance-value">${anodeStatus.text}</div>
           </div>
         ` : ''}
 
@@ -924,11 +1550,9 @@ export class BoilerCard extends LitElement {
           <div class="maintenance-item ${cleaningStatus.status}">
             <div class="maintenance-label">
               <span class="maintenance-icon">🧹</span>
-              Čištění
+              ${this.t('cleaning')}
             </div>
-            <div class="maintenance-value">
-              ${cleaningStatus.text}
-            </div>
+            <div class="maintenance-value">${cleaningStatus.text}</div>
           </div>
         ` : ''}
       </div>
@@ -942,7 +1566,6 @@ export class BoilerCard extends LitElement {
 
     if (alerts.length === 0 && !hasLowTempWarning) return html``;
 
-    // Send notification for low temperature
     if (hasLowTempWarning && avgTemp !== null) {
       this.sendNotification('low_temperature', `${this.t('low_temperature')} (${avgTemp.toFixed(1)}°C)`);
     }
@@ -956,7 +1579,6 @@ export class BoilerCard extends LitElement {
       ` : ''}
 
       ${alerts.map(alert => {
-        // Send notification for this alert
         this.sendNotification(alert.type, alert.message || this.t(alert.type));
 
         return html`
@@ -979,13 +1601,10 @@ export class BoilerCard extends LitElement {
 
     const isOn = this.getControlState();
     const state = this.hass?.states?.[this.config.control_entity];
-    const entityExists = !!state;
-
-    if (!entityExists) return html``;
+    if (!state) return html``;
 
     const buttonStyle = this.config.button_style || 'default';
 
-    // Switch style (iOS-like toggle)
     if (buttonStyle === 'switch') {
       return html`
         <div class="control-section control-section-switch">
@@ -998,7 +1617,6 @@ export class BoilerCard extends LitElement {
       `;
     }
 
-    // Icon only style (just power icon)
     if (buttonStyle === 'icon') {
       return html`
         <div class="control-section control-section-icon">
@@ -1013,7 +1631,6 @@ export class BoilerCard extends LitElement {
       `;
     }
 
-    // Minimal style (text only, no gradients)
     if (buttonStyle === 'minimal') {
       return html`
         <div class="control-section control-section-minimal">
@@ -1028,7 +1645,6 @@ export class BoilerCard extends LitElement {
       `;
     }
 
-    // Default style (current)
     return html`
       <div class="control-section">
         <button
@@ -1049,17 +1665,11 @@ export class BoilerCard extends LitElement {
     }
 
     const avgTemp = this.getAverageTemperature();
-    const targetTemp = this.config.target_temp_entity
-      ? this.getSensorValue(this.config.target_temp_entity)
-      : null;
-    const timeToTarget = this.calculateTimeToTarget();
     const isCompact = this.config.display_mode === 'compact';
     const layoutStyle = this.config.layout_style || 'default';
 
     const sortedSensors = [...(this.config.sensors || [])].sort((a, b) => {
-      const posA = a.position || 0;
-      const posB = b.position || 0;
-      return posA - posB;
+      return (a.position || 0) - (b.position || 0);
     });
 
     return html`
@@ -1067,49 +1677,47 @@ export class BoilerCard extends LitElement {
         <div class="card-content ${isCompact ? 'compact' : ''}">
           ${this.config.title ? html`<h2 class="card-title">${this.config.title}</h2>` : ''}
 
+          ${this.renderStatusBadges()}
+
           ${this.renderAlerts()}
 
           ${this.renderControlButton()}
 
+          ${this.renderOperationModes()}
+
           <div class="boiler-container ${isCompact ? 'compact' : ''} layout-${layoutStyle}">
             <div class="boiler-visual">
               ${this.renderBoilerSVG()}
-
               ${this.renderHeatingSources()}
-
-              ${targetTemp !== null ? html`
-                <div class="target-temp ${isCompact ? 'compact' : ''}">
-                  <div>Cílová: ${targetTemp.toFixed(1)}°C</div>
-                  ${timeToTarget ? html`
-                    <div class="time-estimate">⏱️ ${timeToTarget}</div>
-                  ` : ''}
-                </div>
-              ` : ''}
-
+              ${this.renderTargetTemp()}
               ${this.renderEnergyInfo()}
             </div>
 
             <div class="sensors-panel ${isCompact ? 'compact' : ''}">
               ${sortedSensors.length > 0 ? html`
                 <div class="sensors-list">
-                  ${sortedSensors.map((sensor, idx) => this.renderSensor(sensor, idx))}
+                  ${sortedSensors.map(sensor => this.renderSensor(sensor))}
                 </div>
               ` : html`
-                <div class="no-sensors">Nejsou nakonfigurovány žádné senzory</div>
+                <div class="no-sensors">${this.t('no_sensors')}</div>
               `}
 
               ${this.config.show_average && avgTemp !== null ? html`
                 <div class="average-temp ${isCompact ? 'compact' : ''}">
-                  <div class="sensor-label">Průměrná teplota</div>
-                  <div class="sensor-value average" style="color: ${this.getTemperatureColor(avgTemp)}">
+                  <div class="sensor-label">${this.t('average_temp')}</div>
+                  <div class="sensor-value average" style="color: ${this.getTemperatureColor(avgTemp, true)}">
                     ${avgTemp.toFixed(1)}°C
                   </div>
                 </div>
               ` : ''}
 
+              ${this.renderWaterStats()}
+
               ${this.renderMaintenanceInfo()}
             </div>
           </div>
+
+          ${this.renderHistoryChart()}
         </div>
       </ha-card>
     `;
@@ -1138,6 +1746,47 @@ export class BoilerCard extends LitElement {
 
       .card-content.compact {
         font-size: 0.9em;
+      }
+
+      /* Status badges */
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 16px;
+        background: var(--secondary-background-color);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+        white-space: nowrap;
+      }
+
+      .badge-icon {
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .badge-heating {
+        background: rgba(255, 107, 53, 0.18);
+        color: #FF6B35;
+      }
+
+      .badge-cooling {
+        background: rgba(33, 150, 243, 0.18);
+        color: #2196F3;
+      }
+
+      .badge-ready {
+        background: rgba(76, 175, 80, 0.18);
+        color: #4CAF50;
       }
 
       .warning-banner {
@@ -1205,8 +1854,6 @@ export class BoilerCard extends LitElement {
       }
 
       /* Button Style Variants (v1.5.0) */
-
-      /* Switch style */
       .control-section-switch {
         display: flex;
         align-items: center;
@@ -1271,7 +1918,6 @@ export class BoilerCard extends LitElement {
         transform: translateX(23px);
       }
 
-      /* Icon style */
       .control-section-icon {
         display: flex;
         justify-content: center;
@@ -1311,7 +1957,6 @@ export class BoilerCard extends LitElement {
         font-weight: bold;
       }
 
-      /* Minimal style */
       .control-section-minimal {
         display: flex;
         justify-content: center;
@@ -1343,9 +1988,50 @@ export class BoilerCard extends LitElement {
         background: var(--secondary-background-color);
       }
 
-      /* Layout Style Variants (v1.5.0) */
+      /* Operation modes (v1.6.0) */
+      .operation-modes {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
 
-      /* Horizontal layout */
+      .operation-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--secondary-text-color);
+      }
+
+      .operation-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .mode-chip {
+        padding: 6px 14px;
+        border: 1px solid var(--divider-color);
+        border-radius: 16px;
+        background: transparent;
+        color: var(--primary-text-color);
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .mode-chip:hover {
+        background: var(--secondary-background-color);
+      }
+
+      .mode-chip.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+        font-weight: 600;
+      }
+
+      /* Layout Style Variants (v1.5.0) */
       .layout-horizontal .boiler-container {
         flex-direction: row;
         max-width: 100%;
@@ -1360,7 +2046,6 @@ export class BoilerCard extends LitElement {
         height: 270px;
       }
 
-      /* Minimal layout - smaller, more compact */
       .layout-minimal .boiler-container {
         gap: 16px;
       }
@@ -1387,7 +2072,6 @@ export class BoilerCard extends LitElement {
         font-size: 16px;
       }
 
-      /* Wide layout - bigger boiler, more space */
       .layout-wide .boiler-container {
         gap: 32px;
       }
@@ -1411,6 +2095,7 @@ export class BoilerCard extends LitElement {
 
       .boiler-container {
         display: flex;
+        flex-wrap: wrap;
         gap: 24px;
         align-items: flex-start;
         justify-content: center;
@@ -1439,12 +2124,137 @@ export class BoilerCard extends LitElement {
       .boiler-svg {
         width: 200px;
         height: 300px;
-        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.12));
       }
 
       .boiler-svg.compact {
         width: 150px;
         height: 225px;
+      }
+
+      .boiler-svg.clickable {
+        cursor: pointer;
+      }
+
+      /* SVG parts (v1.6.0) */
+      .insulation {
+        fill: var(--divider-color, #b0bec5);
+        opacity: 0.35;
+      }
+
+      .leg, .leg-base {
+        fill: var(--secondary-text-color, #78909c);
+        opacity: 0.55;
+      }
+
+      .panel-bg {
+        fill: #263238;
+        opacity: 0.9;
+      }
+
+      .panel-temp {
+        fill: #ffffff;
+        font-size: 17px;
+        font-weight: 700;
+        font-family: var(--paper-font-body1_-_font-family, inherit);
+      }
+
+      .panel-target {
+        fill: #ffffff;
+        font-size: 7px;
+        opacity: 0.8;
+        font-family: var(--paper-font-body1_-_font-family, inherit);
+      }
+
+      .panel-led {
+        fill: #9e9e9e;
+      }
+
+      .led-heating {
+        fill: #FF6B35;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      .led-ready {
+        fill: #4CAF50;
+      }
+
+      .led-cooling {
+        fill: #42A5F5;
+      }
+
+      .pipe {
+        stroke-width: 7;
+        stroke-linecap: round;
+      }
+
+      .pipe-hot {
+        stroke: #EF5350;
+      }
+
+      .pipe-cold {
+        stroke: #42A5F5;
+      }
+
+      .pipe-cap {
+        fill: var(--secondary-text-color, #78909c);
+      }
+
+      .pipe-flow {
+        stroke: #ffffff;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-dasharray: 4 8;
+        opacity: 0.85;
+        animation: flow-dash 1.2s linear infinite;
+      }
+
+      .flow-in {
+        animation-direction: reverse;
+      }
+
+      .scale-tick {
+        stroke: var(--secondary-text-color, #9e9e9e);
+        stroke-width: 1;
+        opacity: 0.7;
+      }
+
+      .scale-label {
+        fill: var(--secondary-text-color, #9e9e9e);
+        font-size: 9px;
+        font-family: var(--paper-font-body1_-_font-family, inherit);
+      }
+
+      .target-line {
+        stroke: var(--primary-color, #03a9f4);
+        stroke-width: 1.5;
+        stroke-dasharray: 4 3;
+        opacity: 0.9;
+      }
+
+      .target-arrow {
+        fill: var(--primary-color, #03a9f4);
+      }
+
+      .marker-line {
+        stroke: #ffffff;
+        stroke-width: 0.75;
+        stroke-dasharray: 2 3;
+        opacity: 0.45;
+      }
+
+      .marker-label, .level-label {
+        fill: #ffffff;
+        font-size: 10px;
+        font-weight: 600;
+        font-family: var(--paper-font-body1_-_font-family, inherit);
+        paint-order: stroke;
+        stroke: rgba(0, 0, 0, 0.35);
+        stroke-width: 0.6px;
+      }
+
+      .sensor-marker {
+        cursor: pointer;
       }
 
       /* Animations */
@@ -1454,17 +2264,16 @@ export class BoilerCard extends LitElement {
       }
 
       @keyframes bubble-rise {
-        0% {
-          transform: translateY(0);
-          opacity: 0.7;
-        }
-        100% {
-          transform: translateY(-200px);
-          opacity: 0;
-        }
+        0% { transform: translateY(0); opacity: 0.7; }
+        100% { transform: translateY(-185px); opacity: 0; }
       }
 
-      .heating-pulse {
+      @keyframes flow-dash {
+        from { stroke-dashoffset: 12; }
+        to { stroke-dashoffset: 0; }
+      }
+
+      .heating-element.active path {
         animation: pulse 1.5s ease-in-out infinite;
       }
 
@@ -1472,24 +2281,17 @@ export class BoilerCard extends LitElement {
         animation: bubble-rise 3s ease-in infinite;
       }
 
-      .bubble-1 {
-        animation-delay: 0s;
-        animation-duration: 3s;
-      }
+      .bubble-1 { animation-delay: 0s; animation-duration: 3s; }
+      .bubble-2 { animation-delay: 0.7s; animation-duration: 3.5s; }
+      .bubble-3 { animation-delay: 1.4s; animation-duration: 2.8s; }
+      .bubble-4 { animation-delay: 2.1s; animation-duration: 3.2s; }
+      .bubble-5 { animation-delay: 1.1s; animation-duration: 3.8s; }
 
-      .bubble-2 {
-        animation-delay: 0.7s;
-        animation-duration: 3.5s;
-      }
-
-      .bubble-3 {
-        animation-delay: 1.4s;
-        animation-duration: 2.8s;
-      }
-
-      .bubble-4 {
-        animation-delay: 2.1s;
-        animation-duration: 3.2s;
+      @media (prefers-reduced-motion: reduce) {
+        .bubble, .pipe-flow, .heating-element.active path,
+        .heating-indicator, .heating-source, .led-heating {
+          animation: none;
+        }
       }
 
       /* Heating indicators */
@@ -1535,6 +2337,8 @@ export class BoilerCard extends LitElement {
         background: var(--secondary-background-color);
         border-radius: 12px;
         font-size: 13px;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .energy-label {
@@ -1546,6 +2350,17 @@ export class BoilerCard extends LitElement {
         display: flex;
         gap: 12px;
         align-items: baseline;
+      }
+
+      .energy-today {
+        border-top: 1px solid var(--divider-color);
+        padding-top: 4px;
+        margin-top: 2px;
+      }
+
+      .energy-today-label {
+        font-size: 12px;
+        color: var(--secondary-text-color);
       }
 
       .energy-power {
@@ -1573,6 +2388,41 @@ export class BoilerCard extends LitElement {
         font-size: 12px;
       }
 
+      .target-control {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .target-value {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        font-variant-numeric: tabular-nums;
+        min-width: 70px;
+      }
+
+      .step-button {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: none;
+        background: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        transition: transform 0.15s ease, opacity 0.15s ease;
+      }
+
+      .step-button:hover {
+        transform: scale(1.1);
+      }
+
+      .step-button:active {
+        opacity: 0.7;
+      }
+
       .time-estimate {
         margin-top: 4px;
         font-size: 12px;
@@ -1581,11 +2431,11 @@ export class BoilerCard extends LitElement {
       }
 
       .sensors-panel {
-        flex: 1 1 auto;
+        flex: 1 1 240px;
         display: flex;
         flex-direction: column;
         gap: 16px;
-        min-width: 0;
+        min-width: 240px;
         max-width: 100%;
         overflow: hidden;
       }
@@ -1643,6 +2493,13 @@ export class BoilerCard extends LitElement {
         flex-shrink: 1;
       }
 
+      .sensor-readout {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
       .sensor-value {
         font-size: 20px;
         font-weight: 600;
@@ -1653,6 +2510,25 @@ export class BoilerCard extends LitElement {
 
       .sensor-row.compact .sensor-value {
         font-size: 16px;
+      }
+
+      .trend {
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        opacity: 0.9;
+      }
+
+      .trend-up {
+        color: var(--error-color, #f44336);
+      }
+
+      .trend-down {
+        color: var(--info-color, #2196f3);
+      }
+
+      .trend-flat {
+        color: var(--secondary-text-color);
       }
 
       /* Sparkline */
@@ -1694,8 +2570,117 @@ export class BoilerCard extends LitElement {
         font-size: 20px;
       }
 
-      .maintenance-section {
+      /* Water statistics (v1.6.0) */
+      .water-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 8px;
+      }
+
+      .stat {
+        padding: 10px 12px;
+        background: var(--secondary-background-color);
+        border-radius: 8px;
+        min-width: 0;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        font-variant-numeric: tabular-nums;
+        margin-top: 2px;
+      }
+
+      .stat-sub {
+        font-size: 11px;
+        color: var(--secondary-text-color);
+        margin-top: 2px;
+      }
+
+      /* History chart (v1.6.0) */
+      .history-section {
         margin-top: 16px;
+        border-top: 1px solid var(--divider-color);
+        padding-top: 8px;
+      }
+
+      .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 8px 4px;
+        border: none;
+        background: transparent;
+        color: var(--primary-text-color);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      .history-toggle {
+        color: var(--secondary-text-color);
+      }
+
+      .history-chart {
+        width: 100%;
+        height: auto;
+      }
+
+      .chart-grid {
+        stroke: var(--divider-color, #cfd8dc);
+        stroke-width: 0.5;
+        opacity: 0.8;
+      }
+
+      .chart-label {
+        fill: var(--secondary-text-color, #9e9e9e);
+        font-size: 8px;
+        font-family: var(--paper-font-body1_-_font-family, inherit);
+      }
+
+      .chart-line {
+        fill: none;
+        stroke: var(--primary-color, #03a9f4);
+        stroke-width: 2;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+      }
+
+      .chart-dot {
+        fill: var(--primary-color, #03a9f4);
+      }
+
+      .chart-target {
+        stroke: var(--warning-color, #ff9800);
+        stroke-width: 1;
+        stroke-dasharray: 4 3;
+      }
+
+      .chart-heating-band {
+        fill: #FF6B35;
+        opacity: 0.12;
+      }
+
+      .no-history {
+        padding: 16px;
+        text-align: center;
+        color: var(--secondary-text-color);
+        font-size: 13px;
+        font-style: italic;
+      }
+
+      .maintenance-section {
+        margin-top: 8px;
         padding: 12px;
         background: var(--secondary-background-color);
         border-radius: 8px;
@@ -1710,6 +2695,8 @@ export class BoilerCard extends LitElement {
 
       .maintenance-item {
         display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
         justify-content: space-between;
         align-items: center;
         padding: 8px 0;
@@ -1763,8 +2750,8 @@ export class BoilerCard extends LitElement {
         }
 
         .boiler-svg {
-          width: 150px;
-          height: 225px;
+          width: 170px;
+          height: 255px;
         }
 
         .sensors-panel {
@@ -1775,14 +2762,18 @@ export class BoilerCard extends LitElement {
   }
 
   public getCardSize(): number {
-    return this.config.display_mode === 'compact' ? 4 : 5;
+    let size = this.config.display_mode === 'compact' ? 4 : 5;
+    if (this.config.show_status_badges) size += 1;
+    if (this.config.show_water_stats && this.config.tank_volume) size += 1;
+    if (this.config.show_history_chart && this.chartExpanded) size += 2;
+    return size;
   }
 
-  static getConfigElement() {
+  static getConfigElement(): HTMLElement {
     return document.createElement('ha-boiler-card-editor');
   }
 
-  static getStubConfig() {
+  static getStubConfig(): Record<string, unknown> {
     return {
       type: 'custom:ha-boiler-card',
       title: 'Bojler',
@@ -1796,6 +2787,11 @@ export class BoilerCard extends LitElement {
       max_temp: 80,
       enable_more_info: true,
       advanced_animations: true,
+      show_scale: true,
+      show_sensor_markers: true,
+      show_display_panel: true,
+      show_status_badges: true,
+      tank_volume: 120,
       sensors: []
     };
   }
@@ -1806,7 +2802,16 @@ export class BoilerCard extends LitElement {
   type: 'custom:ha-boiler-card',
   name: 'Boiler Card',
   description: 'Custom card for displaying water heater with temperature sensors',
+  preview: true,
+  documentationURL: 'https://github.com/joshuaaaaa/HA-Water-Heater',
 });
+
+// eslint-disable-next-line no-console
+console.info(
+  `%c HA-BOILER-CARD %c v${CARD_VERSION} `,
+  'color: white; background: #03a9f4; font-weight: 700;',
+  'color: #03a9f4; background: white; font-weight: 700;'
+);
 
 declare global {
   interface HTMLElementTagNameMap {
