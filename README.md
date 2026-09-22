@@ -1,6 +1,6 @@
 # HA Boiler Card 🌡️
 
-[![Version](https://img.shields.io/badge/version-1.4.1-blue.svg)](https://github.com/joshuaaaaa/HA-Water-Heater/releases)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/joshuaaaaa/HA-Water-Heater/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
@@ -11,16 +11,20 @@ Custom Home Assistant Lovelace card pro zobrazení bojleru/ohřívače vody s te
 ## ✨ Funkce
 
 ### 🎨 Vizualizace
-- **Vizuální reprezentace bojleru** s vlastním SVG designem
+- **Detailní SVG nádrž** - izolace, přívodní a výstupní potrubí, topné těleso, nohy
+- **Displej na bojleru** - průměrná teplota, cílová teplota a stavová LED
+- **Plynulá teplotní stratifikace** - gradient počítaný přímo z hodnot senzorů (OKLab míchání barev, žádné šedé přechody)
+- **Alternativní režim vrstev** - `stratification_style: layers` pro ostré vrstvy
+- **Teplotní stupnice** s popisky a značkou cílové teploty
+- **Hodnoty senzorů přímo v nádrži** - klikací, otevřou more-info dialog
+- **Hladina užitkové teplé vody** - vyznačí, kolik nádrže je nad užitnou teplotou
 - **Vlastní barvy** - kompletní přizpůsobení barevného schématu
 - **5 přednastavených témat** - ocean, sunset, forest, fire, ice
-- **Teplotní stratifikace** - barevné vrstvy zobrazující teplotní rozložení
-- **Podpora až 5 teplotních sensorů** (uspořádaných od shora dolů)
-- **Automatický výpočet průměrné teploty**
-- **Barevná gradace** podle teploty
-- **Režimy zobrazení**: Normální / Kompaktní
-- **Mini sparkline grafy** - trendy teplot za posledních 30 minut
-- **Pokročilé animace** - efekt bublinek při ohřevu
+- **Stavové odznaky** - stav, teplota, cíl, zásoba teplé vody, příkon na jeden pohled
+- **Režimy zobrazení**: Normální / Kompaktní + 4 rozvržení
+- **Mini sparkline grafy** a šipky trendu u každého senzoru
+- **Pokročilé animace** - bublinky, proudění v potrubí, pulzující topné těleso
+- **Respektuje `prefers-reduced-motion`** a tmavý motiv Home Assistanta
 
 ### 🔥 Ohřev a monitoring
 - **Indikátor ohřívání** s animací podle typu zdroje
@@ -46,6 +50,24 @@ Custom Home Assistant Lovelace card pro zobrazení bojleru/ohřívače vody s te
 - **5 jazyků**: Čeština, English, Deutsch, Slovenčina, Polski
 - **Vlastní popisky** - přepsání libovolného textu
 - Kompletně přeložené uživatelské rozhraní
+
+### 💧 Zásoba teplé vody (v1.6.0)
+- **Užitková teplá voda v litrech** - kolik vody o užitné teplotě lze načerpat
+- **Odhad počtu sprch** - z objemu nádrže a spotřeby na sprchu
+- **Uložená energie** v kWh (a její cena)
+- **Tepelná ztráta** - naměřená rychlost chladnutí v °C/h a odhad, kdy voda vystydne
+
+### 📊 Historie a trendy (v1.6.0)
+- **Graf historie teplot** s vyznačenými úseky ohřevu a cílovou teplotou
+- **Historie přežije obnovení stránky** (ukládá se do prohlížeče)
+- **Nastavitelná délka historie a interval vzorkování**
+- **Šipky trendu** u každého senzoru
+
+### 🎛️ Ovládání (v1.6.0)
+- **Nastavení cílové teploty** tlačítky +/- (water_heater, climate, number, input_number)
+- **Přepínání režimů** water_heater entity (eco, performance, ...)
+- **Vizuální editor karty** - konfigurace bez YAML
+- **Spotřeba za dnešek** a cena v nastavené měně
 
 ### 🔧 Údržba
 - **Kontrola výměny anody** s počítadlem dnů
@@ -233,6 +255,102 @@ sensors:
 
 ---
 
+## 💧 Objem nádrže a zásoba teplé vody (v1.6.0)
+
+Po zadání objemu nádrže karta spočítá, kolik užitkové vody je k dispozici,
+kolik to je sprch, kolik energie je v nádrži uloženo a jak rychle voda chladne.
+
+```yaml
+type: custom:ha-boiler-card
+title: Bojler 120 l
+tank_volume: 120        # litry
+cold_water_temp: 10     # teplota studené vody na přívodu (°C)
+mixed_water_temp: 40    # užitná teplota vody u kohoutku (°C)
+shower_volume: 40       # spotřeba na jednu sprchu (litry)
+show_water_stats: true
+show_heat_loss: true
+energy_cost: 5.2
+currency: 'Kč'
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+```
+
+---
+
+## 🎛️ Ovládání teploty a režimů (v1.6.0)
+
+`target_temp_entity` nemusí být jen senzor - karta umí číst i atribut
+`temperature` z `water_heater` nebo `climate` entity a rovnou ji nastavovat.
+
+```yaml
+type: custom:ha-boiler-card
+title: Bojler s ovládáním
+target_temp_entity: water_heater.bojler
+show_target_control: true    # tlačítka +/- u cílové teploty
+show_operation_modes: true   # přepínač režimů (eco, performance, ...)
+temp_step: 1                 # krok, pokud ho entita sama neurčuje
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+```
+
+Podporované domény pro nastavení teploty: `water_heater`, `climate`, `number`,
+`input_number`. Režimy se načítají z atributu `operation_list`.
+
+---
+
+## 📊 Historie teplot a trendy (v1.6.0)
+
+Karta si sama sbírá historii měření, takže graf funguje i bez konfigurace
+recorderu. Data se ukládají do prohlížeče, takže přežijí obnovení stránky.
+
+```yaml
+type: custom:ha-boiler-card
+title: Bojler s grafem
+show_history_chart: true
+history_duration: 240    # kolik minut historie se uchovává
+history_interval: 60     # jak často se odebírá vzorek (sekundy)
+persist_history: true    # uložit historii do prohlížeče
+show_trend: true         # šipky trendu u senzorů
+show_sparkline: true
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+```
+
+---
+
+## 🖼️ Nastavení vizualizace (v1.6.0)
+
+```yaml
+type: custom:ha-boiler-card
+title: Bojler
+stratification_style: gradient  # 'gradient' (plynulý) nebo 'layers' (vrstvy)
+show_scale: true                # teplotní stupnice s popisky
+show_sensor_markers: true       # hodnoty senzorů v nádrži
+show_display_panel: true        # displej nad bojlerem
+show_hot_water_level: true      # hladina užitkové teplé vody
+show_insulation: true           # izolační plášť
+show_pipes: true                # potrubí
+show_legs: true                 # nohy
+show_status_badges: true        # odznaky nad kartou
+sensors:
+  - entity: sensor.boiler_temp_top
+    position: 1
+```
+
+---
+
+## 🧩 Vizuální editor
+
+Kartu lze nastavit i bez YAML - v dashboardu klikněte na **Přidat kartu →
+Boiler Card** a použijte formulář. Editor pokrývá senzory, entity, objem
+nádrže, vizualizaci i údržbu. Pokročilé volby (vlastní barvy, upozornění,
+notifikace, hybridní ohřev) zůstávají v YAML editoru.
+
+---
+
 ## ⚙️ Kompletní konfigurace
 
 ```yaml
@@ -318,6 +436,38 @@ Více příkladů v [example-config-advanced.yaml](example-config-advanced.yaml)
 
 ---
 
+## 📋 Nové parametry (v1.6.0)
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `tank_volume` | number | - | Objem nádrže v litrech (zapíná výpočty teplé vody) |
+| `cold_water_temp` | number | 10 | Teplota studené vody na přívodu (°C) |
+| `mixed_water_temp` | number | 40 | Užitná teplota vody u kohoutku (°C) |
+| `shower_volume` | number | 40 | Spotřeba vody na jednu sprchu (litry) |
+| `show_water_stats` | boolean | true | Zobrazit zásobu teplé vody a uloženou energii |
+| `show_heat_loss` | boolean | true | Měřit a zobrazovat rychlost chladnutí |
+| `currency` | string | '' | Měna připojená k cenám (např. `Kč`) |
+| `energy_today_entity` | string | - | Entita se spotřebou za dnešek (kWh) |
+| `show_status_badges` | boolean | true | Odznaky se stavem nad kartou |
+| `show_display_panel` | boolean | true | Displej s teplotou nad bojlerem |
+| `show_scale` | boolean | true | Teplotní stupnice vlevo od nádrže |
+| `show_sensor_markers` | boolean | true | Hodnoty senzorů přímo v nádrži |
+| `show_hot_water_level` | boolean | true | Hladina užitkové teplé vody |
+| `show_insulation` | boolean | true | Izolační plášť nádrže |
+| `show_pipes` | boolean | true | Přívodní a výstupní potrubí |
+| `show_legs` | boolean | true | Nohy bojleru |
+| `stratification_style` | string | gradient | `gradient` nebo `layers` |
+| `show_history_chart` | boolean | false | Graf historie teplot |
+| `history_duration` | number | 120 | Délka uchovávané historie (minuty) |
+| `history_interval` | number | 60 | Interval vzorkování historie (sekundy) |
+| `persist_history` | boolean | true | Uložit historii do prohlížeče |
+| `show_trend` | boolean | true | Šipky trendu u senzorů |
+| `show_target_control` | boolean | false | Tlačítka +/- pro cílovou teplotu |
+| `temp_step` | number | 1 | Krok změny cílové teploty |
+| `show_operation_modes` | boolean | false | Přepínač režimů water_heater entity |
+
+---
+
 ## 🛠️ Řešení problémů
 
 Pokud karta nefunguje:
@@ -332,6 +482,21 @@ Detailní návod: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 ---
 
 ## 📝 Co je nového
+
+### v1.6.0
+- ✨ Přepracovaná vizualizace nádrže - izolace, potrubí, topné těleso, nohy, displej
+- ✨ Plynulá stratifikace počítaná z hodnot senzorů (míchání barev v OKLab)
+- ✨ Teplotní stupnice se značkou cílové teploty a hodnoty senzorů v nádrži
+- ✨ Hladina užitkové teplé vody přímo v nádrži
+- ✨ Zásoba teplé vody v litrech, počet sprch a uložená energie
+- ✨ Měření tepelné ztráty a odhad, kdy voda vystydne
+- ✨ Graf historie teplot s vyznačeným ohřevem + ukládání historie do prohlížeče
+- ✨ Ovládání cílové teploty a režimů water_heater entity
+- ✨ Stavové odznaky, šipky trendu, spotřeba za dnešek, nastavitelná měna
+- ✨ Vizuální editor karty (dříve chybějící `ha-boiler-card-editor`)
+- 🐛 Historie se sbírala jen s nastavenou `target_temp_entity`
+- 🐛 Vrstvy stratifikace počítaly vždy s 5 senzory a přetékaly přes zaoblené rohy
+- 🐛 Texty údržby a popisky byly natvrdo česky bez ohledu na `language`
 
 ### v1.4.1 (2024-12-29)
 - 🐛 Oprava opakovaného odesílání notifikací

@@ -776,3 +776,69 @@ sensors:
   - entity: sensor.boiler_temp_bottom
     name: Dolní
     position: 5
+
+# ================================================
+# Příklad: Vše nové z v1.6.0 pohromadě
+# ================================================
+type: custom:ha-boiler-card
+title: Bojler 120 l
+language: cs
+# --- Objem nádrže a zásoba teplé vody ---
+tank_volume: 120          # litry
+cold_water_temp: 10       # teplota studené vody na přívodu (°C)
+mixed_water_temp: 40      # užitná teplota vody u kohoutku (°C)
+shower_volume: 40         # spotřeba na jednu sprchu (litry)
+show_water_stats: true
+show_heat_loss: true      # rychlost chladnutí a odhad vystydnutí
+# --- Vizualizace nádrže ---
+stratification_style: gradient  # nebo 'layers'
+show_scale: true                # teplotní stupnice s popisky
+show_sensor_markers: true       # hodnoty senzorů v nádrži
+show_display_panel: true        # displej nad bojlerem
+show_hot_water_level: true      # hladina užitkové teplé vody
+show_insulation: true
+show_pipes: true
+show_legs: true
+show_status_badges: true
+advanced_animations: true
+# --- Historie a trendy ---
+show_history_chart: true
+history_duration: 240     # minut historie
+history_interval: 60      # sekund mezi vzorky
+persist_history: true     # uložit historii do prohlížeče
+show_trend: true
+show_sparkline: true
+# --- Ovládání ---
+control_entity: switch.boiler_power
+show_control_button: true
+button_style: default
+target_temp_entity: water_heater.bojler  # umí i climate/number/input_number
+show_target_control: true                # tlačítka +/- pro cílovou teplotu
+show_operation_modes: true               # eco / performance / ...
+temp_step: 1
+# --- Spotřeba ---
+heating_entity: binary_sensor.boiler_heating
+power_entity: sensor.boiler_power
+energy_today_entity: sensor.boiler_energy_today
+energy_cost: 5.2
+currency: 'Kč'
+# --- Rozsah teplot a upozornění ---
+min_temp: 10
+max_temp: 80
+low_temp_warning: 35
+# --- Údržba ---
+anode_last_change: '2024-06-01'
+anode_change_interval: 365
+cleaning_last_date: '2025-02-01'
+cleaning_interval: 180
+# --- Senzory (pořadí shora dolů) ---
+sensors:
+  - entity: sensor.boiler_temp_top
+    name: Horní
+    position: 1
+  - entity: sensor.boiler_temp_middle
+    name: Střed
+    position: 2
+  - entity: sensor.boiler_temp_bottom
+    name: Spodní
+    position: 3
